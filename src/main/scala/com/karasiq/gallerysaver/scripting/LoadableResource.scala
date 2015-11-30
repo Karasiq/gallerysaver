@@ -22,7 +22,7 @@ sealed trait LoadableResource {
   /**
     * Referrer
     */
-  def referrer: String
+  def referrer: Option[String]
 
   /**
     * Cookies
@@ -63,7 +63,7 @@ trait LoadableFile extends LoadableResource {
     val cookies = this.cookies.map { case (k, v) ⇒
       new BasicClientCookie(k, v)
     }
-    FileToDownload(url, path.toString, fileName.getOrElse(""), Seq(FileDownloader.referer(referrer)), cookies, sendReport = true)
+    FileToDownload(url, path.toString, fileName.getOrElse(""), referrer.map(FileDownloader.referer(_)).toList, cookies, sendReport = true)
   }
 
   override def toString: String = {

@@ -18,11 +18,11 @@ trait GalleryLoader {
   def canLoadUrl(url: String): Boolean
 
   /**
-    * Fetches resource from URL
+    * Fetches resources from URL
     * @param url URL
     * @return Available resource
     */
-  def load(url: String): Future[Option[LoadableResource]]
+  def load(url: String): Future[Iterator[LoadableResource]]
 
   /**
     * Fetches sub resources from URL
@@ -34,5 +34,5 @@ trait GalleryLoader {
   /**
     * Custom file downloader
     */
-  def fileDownloader: Option[ActorRef]
+  def fileDownloader: Option[ActorRef] = None
 }

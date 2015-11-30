@@ -3,36 +3,14 @@ package com.karasiq.gallerysaver.app.guice
 import javax.script.{ScriptEngine, ScriptEngineManager}
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.util.Timeout
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Provider}
-import com.karasiq.gallerysaver.dispatcher.LoadedResources
-import com.karasiq.gallerysaver.scripting.{LoadableResource, LoaderRegistry}
+import com.karasiq.gallerysaver.scripting.{LoaderRegistry, LoaderUtils}
 
-import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext
+import scala.language.postfixOps
 
-class ScalaScriptEngineProvider @Inject()(@Named("gallerySaverDispatcher") gallerySaverDispatcher: ActorRef, registry: LoaderRegistry, actorSystem: ActorSystem) extends Provider[ScriptEngine] {
-  object LoaderUtils {
-    import actorSystem.dispatcher
-    import akka.pattern.ask
-
-    private implicit val timeout = Timeout(5 minutes)
-
-    def loadAllFiles(resource: LoadableResource): Unit = {
-      (gallerySaverDispatcher ? resource).foreach {
-        case LoadedResources(resources) ⇒
-          resources.foreach(this.loadAllFiles)
-      }
-    }
-
-    def loadAllFiles(url: String): Unit = {
-      (gallerySaverDispatcher ? url).foreach {
-        case LoadedResources(resources) ⇒
-          resources.foreach(this.loadAllFiles)
-      }
-    }
-  }
-
+class ScalaScriptEngineProvider @Inject()(@Named("gallerySaverDispatcher") gallerySaverDispatcher: ActorRef, registry: LoaderRegistry, actorSystem: ActorSystem, executionContext: ExecutionContext) extends Provider[ScriptEngine] {
   private val engine = new ScriptEngineManager().getEngineByName("scala") match {
     case scalaInterpreter: scala.tools.nsc.interpreter.IMain ⇒
       scalaInterpreter.settings.embeddedDefaults[this.type]
@@ -40,7 +18,8 @@ class ScalaScriptEngineProvider @Inject()(@Named("gallerySaverDispatcher") galle
       scalaInterpreter.bind("Loaders", registry)
       scalaInterpreter.bind("Dispatcher", gallerySaverDispatcher)
       scalaInterpreter.bind("Akka", actorSystem)
-      scalaInterpreter.bind("LoaderUtils", LoaderUtils)
+      scalaInterpreter.bind("LoaderUtils", new LoaderUtils(actorSystem, executionContext, gallerySaverDispatcher))
+      scalaInterpreter.bind("LoaderPool", executionContext)
       scalaInterpreter
 
     case e: ScriptEngine ⇒

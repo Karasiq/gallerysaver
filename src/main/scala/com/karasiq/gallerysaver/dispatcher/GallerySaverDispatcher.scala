@@ -1,7 +1,7 @@
 package com.karasiq.gallerysaver.dispatcher
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import com.karasiq.gallerysaver.scripting.{CacheableGallery, LoadableFile, LoadableGallery, LoaderRegistry}
+import com.karasiq.gallerysaver.scripting.{LoadableFile, LoadableGallery, LoaderRegistry}
 
 import scala.util.{Failure, Success}
 
@@ -16,7 +16,7 @@ class GallerySaverDispatcher(fileDownloader: ActorRef, loaders: LoaderRegistry) 
           log.info("Fetching URL: {}", url)
           loader.load(url).onComplete {
             case Success(resources) ⇒
-              sender ! LoadedResources(resources.toList)
+              sender ! LoadedResources(resources.toStream)
 
             case Failure(exc) ⇒
               log.error(exc, "Error loading URL: {}", url)
@@ -34,7 +34,7 @@ class GallerySaverDispatcher(fileDownloader: ActorRef, loaders: LoaderRegistry) 
       //loader ! f.asFileToDownload
       sender() ! LoadedResources.empty
 
-    case cg: CacheableGallery ⇒
+    //case cg: CacheableGallery ⇒
       // TODO: Cacheable gallery
 
     case g: LoadableGallery ⇒

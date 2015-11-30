@@ -18,6 +18,7 @@ libraryDependencies ++= {
     "com.github.karasiq" %% "mapdbutils" % "1.1-SNAPSHOT",
     "com.typesafe.akka" %% "akka-actor" % akkaV,
     "net.codingwell" %% "scala-guice" % "4.0.1",
-    "org.scalatest" %% "scalatest" % "2.2.4" % "test"
+    "org.scalatest" %% "scalatest" % "2.2.4" % "test",
+    "net.sourceforge.htmlunit" % "htmlunit" % "2.18"
   )
 }
