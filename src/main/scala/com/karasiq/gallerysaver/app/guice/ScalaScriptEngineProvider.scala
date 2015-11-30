@@ -5,7 +5,7 @@ import javax.script.{ScriptEngine, ScriptEngineManager}
 import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Provider}
-import com.karasiq.gallerysaver.scripting.{LoaderRegistry, LoaderUtils}
+import com.karasiq.gallerysaver.scripting.{LoaderRegistry, LoaderUtils, ScriptExecutor}
 
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
@@ -20,6 +20,7 @@ class ScalaScriptEngineProvider @Inject()(@Named("gallerySaverDispatcher") galle
       scalaInterpreter.bind("Akka", actorSystem)
       scalaInterpreter.bind("LoaderUtils", new LoaderUtils(actorSystem, executionContext, gallerySaverDispatcher))
       scalaInterpreter.bind("LoaderPool", executionContext)
+      scalaInterpreter.bind("Scripts", new ScriptExecutor(scalaInterpreter))
       scalaInterpreter
 
     case e: ScriptEngine ⇒
