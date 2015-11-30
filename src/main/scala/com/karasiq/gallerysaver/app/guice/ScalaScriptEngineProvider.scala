@@ -3,6 +3,7 @@ package com.karasiq.gallerysaver.app.guice
 import javax.script.{ScriptEngine, ScriptEngineManager}
 
 import akka.actor.{ActorRef, ActorSystem}
+import akka.event.Logging
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Provider}
 import com.karasiq.gallerysaver.scripting.{LoaderRegistry, LoaderUtils, ScriptExecutor}
@@ -23,6 +24,7 @@ class ScalaScriptEngineProvider @Inject()(config: Config, @Named("gallerySaverDi
       scalaInterpreter.bind("LoaderPool", executionContext)
       scalaInterpreter.bind("Scripts", new ScriptExecutor(scalaInterpreter))
       scalaInterpreter.bind("Config", config)
+      scalaInterpreter.bind("Log", Logging(actorSystem, "ScalaScriptEngine"))
       scalaInterpreter
 
     case e: ScriptEngine ⇒
