@@ -160,7 +160,7 @@ class ImageHostingLoader(ec: ExecutionContext) extends HtmlUnitGalleryLoader {
     */
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = Future {
     imageHostingExpandFuncs(resource.url).collect(downloadableUrl).map { fileUrl ⇒
-      FileResource(this.id, fileUrl, Some(resource.url))
+      FileResource(this.id, fileUrl, Some(resource.url), resource.cookies ++ extractCookies())
     }
   }(ec)
 }
