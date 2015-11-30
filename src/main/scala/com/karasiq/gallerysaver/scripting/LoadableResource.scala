@@ -47,7 +47,7 @@ trait LoadableGallery extends LoadableResource {
 /**
   * Cacheable (immutable) gallery resource
   */
-trait CacheableGallery extends LoadableGallery
+trait CacheableGallery extends LoadableGallery with Serializable
 
 /**
   * File resource
