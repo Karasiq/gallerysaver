@@ -17,7 +17,7 @@ final class ScriptExecutor(scriptEngine: ⇒ ScriptEngine) {
   }
 
   def evalFile(file: String): AnyRef = {
-    val reader = new InputStreamReader(new FileInputStream(file))
+    val reader = new InputStreamReader(new FileInputStream(file), "UTF-8")
     Exception.allCatch.andFinally(IOUtils.closeQuietly(reader)) {
       evalReader(reader)
     }

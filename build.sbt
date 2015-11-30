@@ -23,3 +23,9 @@ libraryDependencies ++= {
     "net.sourceforge.htmlunit" % "htmlunit" % "2.18"
   )
 }
+
+mainClass in Compile := Some("com.karasiq.gallerysaver.app.Main")
+
+fork in run := true
+
+fork in test := true

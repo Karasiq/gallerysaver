@@ -34,7 +34,7 @@ object Main extends App {
       }
 
       scripts.foreach { sc ⇒
-        val reader = new InputStreamReader(new FileInputStream(sc.toFile))
+        val reader = new InputStreamReader(new FileInputStream(sc.toFile), "UTF-8")
         Exception.allCatch.andFinally(IOUtils.closeQuietly(reader)) {
           engine.eval(reader)
         }
