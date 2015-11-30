@@ -16,9 +16,7 @@ class FileDownloaderProvider @Inject()(mapDbFile: MapDbFile, actorSystem: ActorS
     new HttpClientFileDownloader with FileDownloaderActor with history.WithHistory with converter.WithImageConverter with FileDownloaderTraits.CheckSize with FileDownloaderTraits.CheckModified
   }
 
-  private val downloader = actorSystem.actorOf(props(), "defaultFileDownloader")
-
   override def get(): ActorRef = {
-    downloader
+    actorSystem.actorOf(props(), "defaultFileDownloader")
   }
 }

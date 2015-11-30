@@ -50,7 +50,7 @@ class PreviewLoader(ec: ExecutionContext) extends HtmlUnitGalleryLoader {
   override def canLoadUrl(url: String): Boolean = false
 
   protected def asResource(url: String, resource: LoadableResource): LoadableFile = {
-    FileResource(this.id, url, Some(resource.url), resource.cookies ++ extractCookies(), resource.hierarchy)
+    FileResource(this.id, url, Some(resource.url), extractCookies(resource), resource.hierarchy)
   }
 
   /**

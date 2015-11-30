@@ -2,7 +2,6 @@ package com.karasiq.gallerysaver.app
 
 import java.io.{FileInputStream, InputStreamReader}
 import java.nio.file.{Path, Paths}
-import java.util.concurrent.TimeUnit
 import javax.script.{ScriptEngine, SimpleScriptContext}
 
 import akka.actor.ActorSystem
@@ -16,8 +15,6 @@ import com.karasiq.mapdb.MapDbFile
 import net.codingwell.scalaguice.InjectorExtensions._
 import org.apache.commons.io.IOUtils
 
-import scala.concurrent.Await
-import scala.concurrent.duration.FiniteDuration
 import scala.io.StdIn
 import scala.util.control.Exception
 import scala.util.{Failure, Success, Try}
@@ -30,6 +27,7 @@ object Main extends App {
   def loadScriptsDirectory(dir: Path): Unit = {
     val scripts = dir.subFiles.collect {
       case file if file.getFileName.toString.endsWith(".scala") ⇒
+        println(s"Loading plugin: $file")
         file
     }
 
@@ -43,8 +41,9 @@ object Main extends App {
 
   Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
     override def run(): Unit = {
-      Await.ready(injector.instance[ActorSystem].terminate(), FiniteDuration(5, TimeUnit.MINUTES))
-      IOUtils.closeQuietly(injector.instance[MapDbFile])
+      val actorSystem = injector.instance[ActorSystem]
+      actorSystem.registerOnTermination(IOUtils.closeQuietly(injector.instance[MapDbFile]))
+      actorSystem.terminate()
     }
   }))
 

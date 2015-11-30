@@ -3,7 +3,7 @@ package com.karasiq.gallerysaver.app.guice
 import java.nio.file.Paths
 
 import akka.actor.ActorSystem
-import com.google.inject.AbstractModule
+import com.google.inject.{AbstractModule, Singleton}
 import com.karasiq.fileutils.PathUtils._
 import com.karasiq.mapdb.MapDbFile
 import com.typesafe.config.{Config, ConfigFactory}
@@ -27,7 +27,7 @@ class GallerySaverMainModule extends AbstractModule with ScalaModule {
 
   override def configure(): Unit = {
     bind[Config].toInstance(config)
-    bind[MapDbFile].toProvider[GallerySaverMapDbProvider]
+    bind[MapDbFile].toProvider[GallerySaverMapDbProvider].in[Singleton]
     bind[ActorSystem].toInstance(ActorSystem("gallery-saver", config))
   }
 }

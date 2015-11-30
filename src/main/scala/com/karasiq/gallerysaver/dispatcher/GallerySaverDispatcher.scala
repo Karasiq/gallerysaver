@@ -1,5 +1,7 @@
 package com.karasiq.gallerysaver.dispatcher
 
+import java.nio.file.Path
+
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.karasiq.gallerysaver.scripting._
 import com.karasiq.mapdb.MapDbWrapper.MapDbTreeMap
@@ -9,7 +11,7 @@ import org.mapdb.Serializer
 
 import scala.util.{Failure, Success}
 
-class GallerySaverDispatcher(mapDbFile: MapDbFile, fileDownloader: ActorRef, loaders: LoaderRegistry) extends Actor with ActorLogging {
+class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDownloader: ActorRef, loaders: LoaderRegistry) extends Actor with ActorLogging {
   import context.dispatcher
 
   override def receive: Receive = {
@@ -35,7 +37,8 @@ class GallerySaverDispatcher(mapDbFile: MapDbFile, fileDownloader: ActorRef, loa
     case f: LoadableFile ⇒
       val loader = loaders.forId(f.loader).flatMap(_.fileDownloader).getOrElse(fileDownloader)
       log.info("Loading file: {}", f)
-      loader ! f.asFileToDownload
+      val ftd = f.asFileToDownload
+      loader ! ftd.copy(directory = rootDirectory.resolve(ftd.directory).toString)
       sender() ! LoadedResources.empty
 
     case cg: CacheableGallery ⇒
@@ -80,6 +83,7 @@ class GallerySaverDispatcher(mapDbFile: MapDbFile, fileDownloader: ActorRef, loa
       }
 
     case g: LoadableGallery ⇒
+      val sender = this.sender()
       loaders.forId(g.loader).orElse(loaders.forUrl(g.url)) match {
         case Some(loader) ⇒
           log.info("Loading resource: {}", g)

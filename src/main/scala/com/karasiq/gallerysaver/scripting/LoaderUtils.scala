@@ -1,5 +1,7 @@
 package com.karasiq.gallerysaver.scripting
 
+import java.net.{URL, URLEncoder}
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.util.Timeout
 import com.karasiq.gallerysaver.builtin.PreviewsResource
@@ -58,6 +60,15 @@ final class LoaderUtils(actorSystem: ActorSystem, executionContext: ExecutionCon
     })
   }
 
+  // For debug purposes
+  def getSync(url: String): LoadedResources = {
+    asResourcesStream(Seq(get(url)))
+  }
+
+  def getSync(resource: LoadableResource): LoadedResources = {
+    asResourcesStream(Seq(get(resource)))
+  }
+
   def traverse(url: String): Future[LoadedResources] = {
     get(url).map(r ⇒ asResourcesStream(r.resources.map(get)))
   }
@@ -68,5 +79,24 @@ final class LoaderUtils(actorSystem: ActorSystem, executionContext: ExecutionCon
 
   def loadImageHosting(url: String, path: Seq[String]): Future[LoadedResources] = {
     (gallerySaverDispatcher ? PreviewsResource(url, path)).mapTo[LoadedResources]
+  }
+
+  /**
+    * Fixes invalid characters in URL
+    * @param url URL
+    * @return Fixed URL
+    */
+  def fixUrl(url: String): String = {
+    import com.karasiq.networkutils.url._
+
+    def fixName(s: String): String = {
+      URLEncoder.encode(s, "UTF-8")
+        .replace("+", "%20")
+    }
+
+    val parsedUrl = asURL(url)
+    val fixedFile = URLParser(parsedUrl).file.path.split('/').filter(_.nonEmpty).map(fixName).mkString("/", "/", "")
+    val query = Option(parsedUrl.getQuery).fold("")("?" + _)
+    new URL(parsedUrl.getProtocol, parsedUrl.getHost, fixedFile + query).toString
   }
 }

@@ -40,7 +40,7 @@ sealed trait LoadableResource {
   */
 trait LoadableGallery extends LoadableResource {
   override def toString: String = {
-    s"LoadableGallery[$loader]($url, $referrer, $cookies, $hierarchy)"
+    s"LoadableGallery[$loader]($url, ${hierarchy.mkString("/", "/", "/")}, ref = ${referrer.getOrElse("<none>")}, cookies = ${if (cookies.isEmpty) "<none>" else cookies.mkString(", ")})"
   }
 }
 
@@ -67,6 +67,6 @@ trait LoadableFile extends LoadableResource {
   }
 
   override def toString: String = {
-    s"LoadableFile($url, $hierarchy, ${fileName.getOrElse("<auto>")})"
+    s"LoadableFile[$loader]($url, ${hierarchy.mkString("/", "/", "/")}, ${fileName.getOrElse("<auto>")})"
   }
 }

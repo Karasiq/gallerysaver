@@ -71,8 +71,8 @@ class ImageHostingLoader(ec: ExecutionContext) extends HtmlUnitGalleryLoader {
       expandImageHosting("postimg.org/image/",
         _.elementOption(_.getFirstByXPath[HtmlImage]("/html/body/center/img"))),
 
-      expandImageHosting("fotki.yandex.ru/",
-        _.firstByXPath[HtmlLink]("/html/head/link[@rel='image_src']").map(_.getHrefAttribute)),
+//      expandImageHosting("fotki.yandex.ru/",
+//        _.firstByXPath[HtmlLink]("/html/head/link[@rel='image_src']").map(_.getHrefAttribute)),
 
       expandImageHostingR("(img\\d+\\.)?imagevenue\\.com/img\\.php\\?",
         _.elementOption(_.getHtmlElementById[HtmlImage]("thepic"))),
@@ -150,7 +150,7 @@ class ImageHostingLoader(ec: ExecutionContext) extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(PreviewsResource(url)))
+    Future.successful(Iterator(ImageHostingResource(url)))
   }
 
   /**
@@ -160,7 +160,7 @@ class ImageHostingLoader(ec: ExecutionContext) extends HtmlUnitGalleryLoader {
     */
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = Future {
     imageHostingExpandFuncs(resource.url).collect(downloadableUrl).map { fileUrl ⇒
-      FileResource(this.id, fileUrl, Some(resource.url), resource.cookies ++ extractCookies())
+      FileResource(this.id, fileUrl, Some(resource.url), extractCookies(resource))
     }
   }(ec)
 }
