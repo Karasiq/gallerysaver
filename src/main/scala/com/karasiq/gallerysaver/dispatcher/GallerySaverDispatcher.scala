@@ -17,7 +17,7 @@ class GallerySaverDispatcher(mapDbFile: MapDbFile, fileDownloader: ActorRef, loa
       loaders.forUrl(url) match {
         case Some(loader) ⇒
           val sender = this.sender()
-          log.info("Fetching URL: {}", url)
+          log.info("Fetching URL with {}: {}", loader.id, url)
           loader.load(url).onComplete {
             case Success(resources) ⇒
               sender ! LoadedResources(resources.toStream)
@@ -51,10 +51,12 @@ class GallerySaverDispatcher(mapDbFile: MapDbFile, fileDownloader: ActorRef, loa
         .valuesOutsideNodesEnable()
       )
 
+      val sender = this.sender()
+
       cache.get(cg.url) match {
         case Some(resources) ⇒
           log.debug("Found in cache: {}", cg)
-          sender() ! resources
+          sender ! resources
 
         case None ⇒
           loaders.forId(cg.loader).orElse(loaders.forUrl(cg.url)) match {

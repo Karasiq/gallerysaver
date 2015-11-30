@@ -1,7 +1,7 @@
 package com.karasiq.gallerysaver.app.guice
 
 import com.google.inject.{Inject, Provider}
-import com.karasiq.gallerysaver.builtin.PreviewLoader
+import com.karasiq.gallerysaver.builtin.{ImageHostingLoader, PreviewLoader}
 import com.karasiq.gallerysaver.scripting.{GalleryLoader, LoaderRegistry}
 
 import scala.collection.concurrent.TrieMap
@@ -11,6 +11,7 @@ class LoaderRegistryProvider @Inject() (executionContext: ExecutionContext) exte
   private val registry = {
     new LoaderRegistryImpl()
       .register(new PreviewLoader(executionContext))
+      .register(new ImageHostingLoader(executionContext))
   }
 
   override def get(): LoaderRegistry = {
