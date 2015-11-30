@@ -10,7 +10,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 object TestContext {
-  final val injector = Guice.createInjector(new GallerySaverTestModule, new GallerySaverModule)
+  val injector = Guice.createInjector(new GallerySaverTestModule, new GallerySaverModule)
 
   val actorSystem = injector.instance[ActorSystem]
 
