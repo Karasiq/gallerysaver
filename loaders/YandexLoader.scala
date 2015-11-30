@@ -1,15 +1,17 @@
 import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlLink, HtmlPage}
-import com.gargoylesoftware.htmlunit.util.Cookie
 import com.karasiq.common.StringUtils
 import com.karasiq.fileutils.PathUtils
 import com.karasiq.gallerysaver.builtin.PaginationUtils
 import com.karasiq.gallerysaver.scripting._
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.downloader.FileDownloader
-import com.karasiq.networkutils.url._
 import org.apache.commons.io.FilenameUtils
 
 import scala.concurrent.Future
+
+case class YandexPhoto(url: String, hierarchy: Seq[String] = Seq("yandex", "unsorted"), loader: String = "yandex-photo", referrer: Option[String] = None, cookies: Map[String, String] = Map("fotki_adult" → "fotki_adult%3A0")) extends CacheableGallery
+
+case class YandexGallery(url: String, hierarchy: Seq[String] = Seq("yandex"), loader: String = "yandex-gallery", referrer: Option[String] = None, cookies: Map[String, String] = Map("fotki_adult" → "fotki_adult%3A0")) extends LoadableGallery
 
 object YandexParser {
   object Photo {
@@ -56,9 +58,6 @@ object YandexParser {
 }
 
 class YandexPhotoLoader extends HtmlUnitGalleryLoader {
-
-  webClient.addCookies(Set(new Cookie("fotki.yandex.ru", "fotki_adult", "fotki_adult%3A0", "/", 10000000, false)))
-
   /**
     * Loader ID
     */
@@ -79,7 +78,7 @@ class YandexPhotoLoader extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(CachedGalleryResource(this.id, url, hierarchy = Seq("yandex", "unsorted"))))
+    Future.successful(Iterator(YandexPhoto(url)))
   }
 
   /**
@@ -88,7 +87,7 @@ class YandexPhotoLoader extends HtmlUnitGalleryLoader {
     * @return Available resources
     */
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
-    webClient.withGetHtmlPage(resource.url) {
+    withResource(resource) {
       case YandexParser.Photo(url) ⇒
         Iterator(FileResource(this.id, url, Some(resource.url), extractCookies(resource), resource.hierarchy, Some(FilenameUtils.removeExtension(FileDownloader.fileNameFor(url, "")) + ".jpg")))
 
@@ -119,7 +118,7 @@ class YandexGalleryLoader extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(GalleryResource(this.id, url, None, extractCookies("fotki.yandex.ru"), Seq("yandex"))))
+    Future.successful(Iterator(YandexGallery(url)))
   }
 
   /**
@@ -128,11 +127,12 @@ class YandexGalleryLoader extends HtmlUnitGalleryLoader {
     * @return Available resources
     */
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
-    webClient.withGetHtmlPage(resource.url) {
+    withResource(resource) {
       case YandexParser.Gallery(title, images) ⇒
-        images.map { img ⇒
-          CachedGalleryResource("yandex-photo", img, Some(resource.url), extractCookies(resource), resource.hierarchy :+ PathUtils.validFileName(title))
-        }
+        images.map(YandexPhoto(_, resource.hierarchy :+ PathUtils.validFileName(title), referrer = Some(resource.url), cookies = extractCookies(resource)))
+
+      case _ ⇒
+        Iterator.empty
     }
   }
 }
