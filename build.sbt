@@ -16,6 +16,7 @@ libraryDependencies ++= {
     "com.github.karasiq" %% "commons" % "1.1-SNAPSHOT",
     "com.github.karasiq" %% "akka-commons" % "1.0",
     "com.github.karasiq" %% "mapdbutils" % "1.1-SNAPSHOT",
+    "org.mapdb" % "mapdb" % "2.0-beta8",
     "com.typesafe.akka" %% "akka-actor" % akkaV,
     "net.codingwell" %% "scala-guice" % "4.0.1",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test",
