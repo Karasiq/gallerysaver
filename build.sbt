@@ -5,7 +5,7 @@ lazy val rootSettings = Seq(
   scalaVersion := "2.11.7",
   resolvers += Resolver.sonatypeRepo("snapshots"),
   libraryDependencies ++= {
-    val akkaV = "2.4.0"
+    val akkaV = "2.4.1"
     Seq(
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,

@@ -32,6 +32,28 @@ object GallerySaverDispatcher {
     }
     FileToDownload(f.url, path.toString, f.fileName.getOrElse(""), f.referrer.map(FileDownloader.referer(_)).toList, cookies, sendReport = false)
   }
+
+  /**
+    * Updates cached resources
+    * @param r Resources to patch
+    * @param res Parent resource
+    */
+  def patchResources(r: LoadedResources, res: LoadableResource): LoadedResources = {
+    def newHierarchy(h1: Seq[String], h2: Seq[String]): Seq[String] = {
+      h1 ++ h2.drop(h1.length)
+    }
+
+    r.copy(r.resources.collect {
+      case f: LoadableFile ⇒
+        FileResource(f.loader, f.url, f.referrer, f.cookies ++ res.cookies, newHierarchy(res.hierarchy, f.hierarchy), f.fileName)
+
+      case cg: CacheableGallery ⇒
+        CachedGalleryResource(cg.loader, cg.url, cg.referrer, cg.cookies ++ res.cookies, newHierarchy(res.hierarchy, cg.hierarchy))
+
+      case g: LoadableGallery ⇒
+        GalleryResource(g.loader, g.url, g.referrer, g.cookies ++ res.cookies, newHierarchy(res.hierarchy, g.hierarchy))
+    })
+  }
 }
 
 class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDownloader: ActorRef, loaders: LoaderRegistry) extends Actor with ActorLogging {
@@ -53,7 +75,7 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
     cache.get(cg.url) match {
       case Some(resources) ⇒
         log.debug("Found in cache: {}", cg)
-        sender ! resources
+        sender ! GallerySaverDispatcher.patchResources(resources, cg)
 
       case None ⇒
         log.debug("Caching resource: {}", cg)

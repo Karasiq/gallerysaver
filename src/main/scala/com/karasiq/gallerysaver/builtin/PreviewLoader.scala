@@ -21,9 +21,9 @@ class PreviewLoader(ec: ExecutionContext) extends HtmlUnitGalleryLoader {
   /**
     * Is loader applicable to provided URL
     * @param url URL
-    * @return Always returns `false` to not conflict with other loaders
+    * @return Always returns `true`
     */
-  override def canLoadUrl(url: String): Boolean = false
+  override def canLoadUrl(url: String): Boolean = true
 
   protected def asResource(url: String, resource: LoadableResource): LoadableFile = {
     FileResource(this.id, url, Some(resource.url), extractCookies(resource), resource.hierarchy)

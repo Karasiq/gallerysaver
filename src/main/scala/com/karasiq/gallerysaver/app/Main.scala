@@ -1,7 +1,6 @@
 package com.karasiq.gallerysaver.app
 
 import java.nio.file.{Path, Paths}
-import java.util.concurrent.TimeUnit
 import javax.script.{ScriptEngine, SimpleScriptContext}
 
 import akka.actor.ActorSystem
@@ -16,8 +15,9 @@ import net.codingwell.scalaguice.InjectorExtensions._
 import org.apache.commons.io.IOUtils
 
 import scala.concurrent.Await
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 import scala.io.{Source, StdIn}
+import scala.language.postfixOps
 import scala.util.control.Exception
 import scala.util.{Failure, Success, Try}
 
@@ -43,13 +43,13 @@ object Main extends App {
 
     // Add shutdown hook
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
+      //noinspection ScalaDeprecation
       override def run(): Unit = {
         val actorSystem = injector.instance[ActorSystem]
         val mapDbFile = injector.instance[MapDbFile]
         actorSystem.log.info("Shutting down GallerySaver")
         actorSystem.registerOnTermination(IOUtils.closeQuietly(mapDbFile))
-        actorSystem.terminate()
-        Await.ready(actorSystem.whenTerminated, FiniteDuration(5, TimeUnit.MINUTES))
+        Await.ready(actorSystem.terminate(), Duration.Inf)
       }
     }))
 
