@@ -43,7 +43,6 @@ object Main extends App {
 
     // Add shutdown hook
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
-      //noinspection ScalaDeprecation
       override def run(): Unit = {
         val actorSystem = injector.instance[ActorSystem]
         val mapDbFile = injector.instance[MapDbFile]

@@ -13,25 +13,23 @@ import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
 class ScalaScriptEngineProvider @Inject()(config: Config, @Named("gallerySaverDispatcher") gallerySaverDispatcher: ActorRef, registry: LoaderRegistry, actorSystem: ActorSystem, executionContext: ExecutionContext) extends Provider[ScriptEngine] {
-  private val engine = new ScriptEngineManager().getEngineByName("scala") match {
-    case scalaInterpreter: scala.tools.nsc.interpreter.IMain ⇒
-      scalaInterpreter.settings.embeddedDefaults[this.type]
-      scalaInterpreter.settings.usejavacp.value = true
-      scalaInterpreter.bind("Loaders", registry)
-      scalaInterpreter.bind("Dispatcher", gallerySaverDispatcher)
-      scalaInterpreter.bind("Akka", actorSystem)
-      scalaInterpreter.bind("LoaderUtils", new LoaderUtils(actorSystem, executionContext, gallerySaverDispatcher))
-      scalaInterpreter.bind("LoaderPool", executionContext)
-      scalaInterpreter.bind("Scripts", new ScriptExecutor(scalaInterpreter))
-      scalaInterpreter.bind("Config", config)
-      scalaInterpreter.bind("Log", Logging(actorSystem, "ScalaScriptEngine"))
-      scalaInterpreter
-
-    case e: ScriptEngine ⇒
-      e
-  }
-
   override def get(): ScriptEngine = {
-    engine
+    new ScriptEngineManager().getEngineByName("scala") match {
+      case scalaInterpreter: scala.tools.nsc.interpreter.IMain ⇒
+        scalaInterpreter.settings.embeddedDefaults[this.type]
+        scalaInterpreter.settings.usejavacp.value = true
+        scalaInterpreter.bind("Loaders", registry)
+        scalaInterpreter.bind("Dispatcher", gallerySaverDispatcher)
+        scalaInterpreter.bind("Akka", actorSystem)
+        scalaInterpreter.bind("LoaderUtils", new LoaderUtils(actorSystem, executionContext, gallerySaverDispatcher))
+        scalaInterpreter.bind("LoaderPool", executionContext)
+        scalaInterpreter.bind("Scripts", new ScriptExecutor(scalaInterpreter))
+        scalaInterpreter.bind("Config", config)
+        scalaInterpreter.bind("Log", Logging(actorSystem, "ScalaScriptEngine"))
+        scalaInterpreter
+
+      case _ ⇒
+        throw new IllegalArgumentException("Invalid scala interpreter")
+    }
   }
 }

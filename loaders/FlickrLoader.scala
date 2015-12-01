@@ -138,9 +138,11 @@ object FlickrParser {
     }
 
     def unapply(page: HtmlPage): Option[(String, Iterator[String])] = {
-      val iterator = photos(page)
       val title = page.getTitleText.split(Regex.quote("|"), 2).headOption.map(StringUtils.htmlTrim)
-      if (iterator.isEmpty) None else title.map(_ → iterator)
+      for {
+        title <- title
+        images <- Some(photos(page)) if images.nonEmpty
+      } yield (title, images)
     }
   }
 

@@ -1,7 +1,6 @@
 package com.karasiq.gallerysaver.mapdb
 
 import java.nio.file.{Path, Paths}
-import java.time.Instant
 
 import com.karasiq.common.Lazy
 import com.karasiq.common.Lazy._
@@ -14,8 +13,6 @@ import com.karasiq.networkutils.downloader._
 import com.karasiq.networkutils.http.headers.HttpHeader
 
 import scala.language.postfixOps
-
-final case class FileDownloaderHistoryEntry(fileName: String, url: String, size: Long, date: Instant = Instant.now())
 
 final class FileDownloaderHistory(historyDb: MapDbFile) {
   private val history = Lazy.atomic {
