@@ -1,6 +1,7 @@
 package com.karasiq.gallerysaver.builtin
 
 import com.gargoylesoftware.htmlunit.html.HtmlImage
+import com.karasiq.gallerysaver.builtin.utils.{ImageAnchor, ImagePreview}
 import com.karasiq.gallerysaver.scripting._
 import com.karasiq.networkutils.HtmlUnitUtils._
 

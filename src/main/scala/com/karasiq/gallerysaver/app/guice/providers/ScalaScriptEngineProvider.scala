@@ -1,4 +1,4 @@
-package com.karasiq.gallerysaver.app.guice
+package com.karasiq.gallerysaver.app.guice.providers
 
 import javax.script.{ScriptEngine, ScriptEngineManager}
 

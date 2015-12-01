@@ -1,4 +1,4 @@
-package com.karasiq.gallerysaver.builtin
+package com.karasiq.gallerysaver.builtin.utils
 
 import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlImage}
 

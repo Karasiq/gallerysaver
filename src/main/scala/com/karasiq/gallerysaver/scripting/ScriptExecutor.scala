@@ -1,10 +1,9 @@
 package com.karasiq.gallerysaver.scripting
 
-import java.io.{FileInputStream, InputStreamReader, Reader}
+import java.io.Reader
 import javax.script.ScriptEngine
 
-import org.apache.commons.io.IOUtils
-
+import scala.io.{BufferedSource, Source}
 import scala.util.control.Exception
 
 final class ScriptExecutor(scriptEngine: ⇒ ScriptEngine) {
@@ -16,10 +15,14 @@ final class ScriptExecutor(scriptEngine: ⇒ ScriptEngine) {
     scriptEngine.eval(reader)
   }
 
+  def evalSource(source: BufferedSource): AnyRef = {
+    evalReader(source.bufferedReader())
+  }
+
   def evalFile(file: String): AnyRef = {
-    val reader = new InputStreamReader(new FileInputStream(file), "UTF-8")
-    Exception.allCatch.andFinally(IOUtils.closeQuietly(reader)) {
-      evalReader(reader)
+    val source = Source.fromFile(file, "UTF-8")
+    Exception.allCatch.andFinally(source.close()) {
+      evalSource(source)
     }
   }
 }

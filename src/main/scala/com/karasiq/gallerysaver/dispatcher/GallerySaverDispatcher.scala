@@ -19,7 +19,7 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
       loaders.forUrl(url) match {
         case Some(loader) ⇒
           val sender = this.sender()
-          log.info("Fetching URL with {}: {}", loader.id, url)
+          log.debug("Fetching URL with {}: {}", loader.id, url)
           loader.load(url).onComplete {
             case Success(resources) ⇒
               sender ! LoadedResources(resources.toStream)
@@ -36,7 +36,7 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
 
     case f: LoadableFile ⇒
       val loader = loaders.forId(f.loader).flatMap(_.fileDownloader).getOrElse(fileDownloader)
-      log.info("Loading file: {}", f)
+      log.debug("Loading file: {}", f)
       val ftd = f.asFileToDownload
       loader ! ftd.copy(directory = rootDirectory.resolve(ftd.directory).toString)
       sender() ! LoadedResources.empty
@@ -86,7 +86,7 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
       val sender = this.sender()
       loaders.forId(g.loader).orElse(loaders.forUrl(g.url)) match {
         case Some(loader) ⇒
-          log.info("Loading resource: {}", g)
+          log.debug("Loading resource: {}", g)
           loader.load(g).onComplete {
             case Success(resources) ⇒
               sender ! LoadedResources(resources.toStream)

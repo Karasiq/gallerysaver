@@ -1,4 +1,4 @@
-package com.karasiq.gallerysaver.app.guice
+package com.karasiq.gallerysaver.app.guice.providers
 
 import com.google.inject.{Inject, Provider}
 import com.karasiq.fileutils.PathUtils._

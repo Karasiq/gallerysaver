@@ -5,6 +5,7 @@ import java.net.URL
 import com.gargoylesoftware.htmlunit.html.HtmlPage
 import com.gargoylesoftware.htmlunit.util.Cookie
 import com.gargoylesoftware.htmlunit.{CookieManager, WebClient}
+import com.karasiq.common.ThreadLocalFactory
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url._
 
@@ -41,5 +42,7 @@ trait HtmlUnitGalleryLoader extends GalleryLoader {
     }
   }
 
-  protected val webClient: WebClient = newWebClient(js = false, cookieManager = newCookieManager(false))
+  protected val webClientFactory: ThreadLocalFactory[WebClient] = ThreadLocalFactory.softRef(newWebClient(js = false, cookieManager = newCookieManager(false)), _.close())
+
+  final def webClient: WebClient = webClientFactory()
 }

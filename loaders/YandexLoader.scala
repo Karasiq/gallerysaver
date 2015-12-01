@@ -1,7 +1,7 @@
 import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlLink, HtmlPage}
 import com.karasiq.common.StringUtils
 import com.karasiq.fileutils.PathUtils
-import com.karasiq.gallerysaver.builtin.PaginationUtils
+import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
 import com.karasiq.gallerysaver.scripting._
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.downloader.FileDownloader

@@ -1,5 +1,6 @@
 package com.karasiq.gallerysaver.builtin
 
+import com.karasiq.gallerysaver.builtin.utils.ImageHostingExtractor
 import com.karasiq.gallerysaver.scripting._
 
 import scala.concurrent.{ExecutionContext, Future}
