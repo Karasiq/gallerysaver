@@ -81,7 +81,7 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
         log.debug("Caching resource: {}", cg)
         loader.load(cg).onComplete {
           case Success(resources) ⇒
-            val result = LoadedResources(resources.toStream)
+            val result = LoadedResources(resources.toList) // Eager load
             if (result.resources.isEmpty) {
               log.warning(s"No resources found for: $cg")
             } else {
