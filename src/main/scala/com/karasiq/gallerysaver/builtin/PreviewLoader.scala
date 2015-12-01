@@ -1,13 +1,13 @@
 package com.karasiq.gallerysaver.builtin
 
-import com.gargoylesoftware.htmlunit.html.HtmlImage
+import com.gargoylesoftware.htmlunit.html.{HtmlImage, HtmlPage}
 import com.karasiq.gallerysaver.builtin.utils.{ImageAnchor, ImagePreview}
 import com.karasiq.gallerysaver.scripting._
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class PreviewsResource(url: String, hierarchy: Seq[String] = Seq("previews", "unsorted"), loader: String = "previews", referrer: Option[String] = None, cookies: Map[String, String] = Map.empty) extends CacheableGallery
+case class PreviewsResource(url: String, hierarchy: Seq[String] = Seq("previews", "unsorted"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty, loader: String = "previews") extends CacheableGallery
 
 /**
   * Generic image loader
@@ -44,15 +44,18 @@ class PreviewLoader(ec: ExecutionContext) extends HtmlUnitGalleryLoader {
     * @return Available resources
     */
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = Future {
-    withResource(resource)(_.descendantsBy {
-      case ImagePreview(a) ⇒
-        asResource(a.fullHref, resource)
+    withResource(resource) {
+      case htmlPage: HtmlPage ⇒
+        htmlPage.descendantsBy {
+          case ImagePreview(a) ⇒
+            asResource(a.fullHref, resource)
 
-      case ImageAnchor(a) ⇒
-        asResource(a.fullHref, resource)
+          case ImageAnchor(a) ⇒
+            asResource(a.fullHref, resource)
 
-      case img: HtmlImage ⇒
-        asResource(img.fullSrc, resource)
-    })
+          case img: HtmlImage ⇒
+            asResource(img.fullSrc, resource)
+        }
+    }
   }(ec)
 }

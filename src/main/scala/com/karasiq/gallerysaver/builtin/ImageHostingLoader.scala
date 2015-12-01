@@ -5,7 +5,7 @@ import com.karasiq.gallerysaver.scripting._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class ImageHostingResource(url: String, hierarchy: Seq[String] = Seq("imagehosting", "unsorted"), loader: String = "image-hosting", referrer: Option[String] = None, cookies: Map[String, String] = Map.empty) extends CacheableGallery
+case class ImageHostingResource(url: String, hierarchy: Seq[String] = Seq("imagehosting", "unsorted"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty, loader: String = "image-hosting") extends CacheableGallery
 
 /**
  * Image hosting expander
@@ -31,7 +31,7 @@ class ImageHostingLoader(ec: ExecutionContext) extends GalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(ImageHostingResource(url)))
+    Future.successful(Iterator(ImageHostingResource(url, loader = this.id)))
   }
 
   /**

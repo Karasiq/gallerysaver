@@ -2,22 +2,38 @@ package com.karasiq.gallerysaver.scripting
 
 import java.net.URL
 
-import com.gargoylesoftware.htmlunit.html.HtmlPage
 import com.gargoylesoftware.htmlunit.util.Cookie
-import com.gargoylesoftware.htmlunit.{CookieManager, WebClient}
+import com.gargoylesoftware.htmlunit.{CookieManager, Page, WebClient}
 import com.karasiq.common.ThreadLocalFactory
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url._
 
 import scala.collection.JavaConversions._
 
-trait HtmlUnitGalleryLoader extends GalleryLoader {
-  protected final def newCookieManager(enabled: Boolean): CookieManager = {
+object HtmlUnitGalleryLoader {
+  /**
+    * Creates new cookie manager
+    * @param enabled Cookies enabled
+    * @return Cookie manager
+    */
+  def newCookieManager(enabled: Boolean = true): CookieManager = {
     val cm = new CookieManager()
     cm.setCookiesEnabled(enabled)
     cm
   }
 
+  private val factory: ThreadLocalFactory[WebClient] = ThreadLocalFactory.softRef(newWebClient(js = false, cookieManager = newCookieManager()), _.close())
+
+  /**
+    * Creates web client with default settings
+    * @return HtmlUnit web client
+    */
+  def createWebClient(): WebClient = {
+    factory()
+  }
+}
+
+trait HtmlUnitGalleryLoader extends GalleryLoader {
   protected final def extractCookies(domain: String): Map[String, String] = {
     webClient.getCookieManager.getCookies
       .filter(_.getDomain.toLowerCase == domain.toLowerCase)
@@ -28,21 +44,24 @@ trait HtmlUnitGalleryLoader extends GalleryLoader {
     resource.cookies ++ extractCookies(new URL(resource.url).getHost)
   }
 
-  protected def withResource[T](resource: LoadableResource)(f: HtmlPage ⇒ T): T = {
-    val cookies = {
-      val host = new URL(resource.url).getHost
-      val cm = new CookieManager
-      resource.cookies.foreach { case (k, v) ⇒
-        cm.addCookie(new Cookie(host, k, v, "/", 10000000, false))
-      }
-      cm
-    }
-    webClient.withCookies(cookies) {
-      webClient.withGetHtmlPage(resource.url)(f)
+  protected def compileCookies(resource: LoadableResource): Iterator[Cookie] = {
+    val host = new URL(resource.url).getHost
+    resource.cookies.toIterator.map { case (k, v) ⇒
+      new Cookie(host, k, v, "/", 10000000, false)
     }
   }
 
-  protected val webClientFactory: ThreadLocalFactory[WebClient] = ThreadLocalFactory.softRef(newWebClient(js = false, cookieManager = newCookieManager(false)), _.close())
+  protected def withResource[T <: LoadableResource](resource: LoadableResource)(f: PartialFunction[Page, Iterator[T]]): Iterator[T] = {
+    val cookies = {
+      val cm = new CookieManager
+      this.compileCookies(resource).foreach(cm.addCookie)
+      cm
+    }
 
-  final def webClient: WebClient = webClientFactory()
+    webClient.withCookies(cookies) {
+      webClient.withGetPage(resource.url)(f.orElse[Page, Iterator[T]] { case _ ⇒ Iterator.empty })
+    }
+  }
+
+  def webClient: WebClient = HtmlUnitGalleryLoader.createWebClient()
 }

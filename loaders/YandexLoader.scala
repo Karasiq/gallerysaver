@@ -9,9 +9,9 @@ import org.apache.commons.io.FilenameUtils
 
 import scala.concurrent.Future
 
-case class YandexPhoto(url: String, hierarchy: Seq[String] = Seq("yandex", "unsorted"), loader: String = "yandex-photo", referrer: Option[String] = None, cookies: Map[String, String] = Map("fotki_adult" → "fotki_adult%3A0")) extends CacheableGallery
+case class YandexPhoto(url: String, hierarchy: Seq[String] = Seq("yandex", "unsorted"), referrer: Option[String] = None, cookies: Map[String, String] = Map("fotki_adult" → "fotki_adult%3A0"), loader: String = "yandex-photo") extends CacheableGallery
 
-case class YandexGallery(url: String, hierarchy: Seq[String] = Seq("yandex"), loader: String = "yandex-gallery", referrer: Option[String] = None, cookies: Map[String, String] = Map("fotki_adult" → "fotki_adult%3A0")) extends LoadableGallery
+case class YandexGallery(url: String, hierarchy: Seq[String] = Seq("yandex"), referrer: Option[String] = None, cookies: Map[String, String] = Map("fotki_adult" → "fotki_adult%3A0"), loader: String = "yandex-gallery") extends LoadableGallery
 
 object YandexParser {
   object Photo {
@@ -90,9 +90,6 @@ class YandexPhotoLoader extends HtmlUnitGalleryLoader {
     withResource(resource) {
       case YandexParser.Photo(url) ⇒
         Iterator(FileResource(this.id, url, Some(resource.url), extractCookies(resource), resource.hierarchy, Some(FilenameUtils.removeExtension(FileDownloader.fileNameFor(url, "")) + ".jpg")))
-
-      case _ ⇒
-        Iterator.empty
     }
   }
 }
@@ -129,14 +126,11 @@ class YandexGalleryLoader extends HtmlUnitGalleryLoader {
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     withResource(resource) {
       case YandexParser.Gallery(title, images) ⇒
-        images.map(YandexPhoto(_, resource.hierarchy :+ PathUtils.validFileName(title), referrer = Some(resource.url), cookies = extractCookies(resource)))
-
-      case _ ⇒
-        Iterator.empty
+        images.map(YandexPhoto(_, resource.hierarchy :+ PathUtils.validFileName(title), Some(resource.url), extractCookies(resource)))
     }
   }
 }
 
 Loaders
-  .register[YandexPhotoLoader]
   .register[YandexGalleryLoader]
+  .register[YandexPhotoLoader]

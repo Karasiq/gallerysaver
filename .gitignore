@@ -3,3 +3,4 @@ target
 test.conf
 gallerysaver.conf
 galleries
+*.bat

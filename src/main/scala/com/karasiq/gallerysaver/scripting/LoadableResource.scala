@@ -1,10 +1,5 @@
 package com.karasiq.gallerysaver.scripting
 
-import java.nio.file.Paths
-
-import com.karasiq.networkutils.downloader.{FileDownloader, FileToDownload}
-import org.apache.http.impl.cookie.BasicClientCookie
-
 /**
   * Generic internet resource
   */
@@ -40,7 +35,7 @@ sealed trait LoadableResource {
   */
 trait LoadableGallery extends LoadableResource {
   override def toString: String = {
-    s"LoadableGallery[$loader]($url, ${hierarchy.mkString("/", "/", "/")}, ref = ${referrer.getOrElse("<none>")}, cookies = ${if (cookies.isEmpty) "<none>" else cookies.mkString(", ")})"
+    s"LoadableGallery[$loader]($url, ${hierarchy.mkString("/", "/", "/")}, ref = ${referrer.getOrElse("<none>")}, cookies = ${if (cookies.isEmpty) "<none>" else cookies.mkString("; ")})"
   }
 }
 
@@ -58,15 +53,7 @@ trait LoadableFile extends LoadableResource {
     */
   def fileName: Option[String]
 
-  def asFileToDownload: FileToDownload = {
-    val path = Paths.get(hierarchy.head, hierarchy.tail:_*)
-    val cookies = this.cookies.map { case (k, v) ⇒
-      new BasicClientCookie(k, v)
-    }
-    FileToDownload(url, path.toString, fileName.getOrElse(""), referrer.map(FileDownloader.referer(_)).toList, cookies, sendReport = true)
-  }
-
   override def toString: String = {
-    s"LoadableFile[$loader]($url, ${hierarchy.mkString("/", "/", "/")}, ${fileName.getOrElse("<auto>")})"
+    s"LoadableFile[$loader]($url, ${hierarchy.mkString("/", "/", "/") + fileName.getOrElse("<auto>")}, ref = ${referrer.getOrElse("<none>")}, cookies = ${if (cookies.isEmpty) "<none>" else cookies.mkString("; ")})"
   }
 }

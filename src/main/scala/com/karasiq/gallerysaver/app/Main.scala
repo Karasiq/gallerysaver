@@ -1,6 +1,7 @@
 package com.karasiq.gallerysaver.app
 
 import java.nio.file.{Path, Paths}
+import java.util.concurrent.TimeUnit
 import javax.script.{ScriptEngine, SimpleScriptContext}
 
 import akka.actor.ActorSystem
@@ -10,9 +11,12 @@ import com.karasiq.fileutils.PathUtils._
 import com.karasiq.fileutils.pathtree.PathTreeUtils._
 import com.karasiq.gallerysaver.app.guice.{GallerySaverMainModule, GallerySaverModule}
 import com.karasiq.mapdb.MapDbFile
+import com.karasiq.networkutils.HtmlUnitUtils
 import net.codingwell.scalaguice.InjectorExtensions._
 import org.apache.commons.io.IOUtils
 
+import scala.concurrent.Await
+import scala.concurrent.duration.FiniteDuration
 import scala.io.{Source, StdIn}
 import scala.util.control.Exception
 import scala.util.{Failure, Success, Try}
@@ -31,6 +35,9 @@ object Main extends App {
   }
 
   private def startup(): Unit = {
+    // Disable HtmlUnit logging
+    HtmlUnitUtils.disableLogging()
+
     // Dependency injector
     val injector = Guice.createInjector(new GallerySaverMainModule, new GallerySaverModule)
 
@@ -38,9 +45,11 @@ object Main extends App {
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       override def run(): Unit = {
         val actorSystem = injector.instance[ActorSystem]
+        val mapDbFile = injector.instance[MapDbFile]
         actorSystem.log.info("Shutting down GallerySaver")
-        actorSystem.registerOnTermination(IOUtils.closeQuietly(injector.instance[MapDbFile]))
+        actorSystem.registerOnTermination(IOUtils.closeQuietly(mapDbFile))
         actorSystem.terminate()
+        Await.ready(actorSystem.whenTerminated, FiniteDuration(5, TimeUnit.MINUTES))
       }
     }))
 
