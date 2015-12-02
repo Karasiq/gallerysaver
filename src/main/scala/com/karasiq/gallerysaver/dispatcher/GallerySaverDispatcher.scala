@@ -1,8 +1,8 @@
 package com.karasiq.gallerysaver.dispatcher
 
-import java.io.IOException
+import java.io.{FileOutputStream, IOException}
 import java.net.URL
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Files, Path, Paths}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Date
@@ -15,10 +15,12 @@ import com.karasiq.mapdb.MapDbWrapper.MapDbTreeMap
 import com.karasiq.mapdb.serialization.MapDbSerializer
 import com.karasiq.mapdb.{MapDbFile, MapDbWrapper}
 import com.karasiq.networkutils.downloader.{FileDownloader, FileToDownload}
+import org.apache.commons.io.IOUtils
 import org.apache.http.impl.cookie.BasicClientCookie
 import org.mapdb.Serializer
 
 import scala.language.postfixOps
+import scala.util.control.Exception
 import scala.util.{Failure, Success, Try}
 
 object GallerySaverDispatcher {
@@ -148,6 +150,18 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
           log.warning("Loader not found for URL: {}", url)
           sender() ! None
       }
+
+    case fg: FileGenerator ⇒
+      log.debug("Generating file: {}", fg)
+      val path = Paths.get(rootDirectory.toString, fg.hierarchy:_*)
+        .resolve(FileDownloader.fileNameFor(fg.url, fg.fileName.getOrElse("")))
+
+      Files.createDirectories(path.getParent)
+      val outputStream = new FileOutputStream(path.toFile)
+      Exception.allCatch.andFinally(IOUtils.closeQuietly(outputStream)) {
+        fg.write(outputStream)
+      }
+      sender() ! LoadedResources.empty
 
     case f: LoadableFile ⇒
       val loader = loaders.forId(f.loader)

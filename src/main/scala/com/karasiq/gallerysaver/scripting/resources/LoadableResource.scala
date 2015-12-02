@@ -1,5 +1,7 @@
 package com.karasiq.gallerysaver.scripting.resources
 
+import java.io.OutputStream
+
 /**
   * Generic internet resource
   */
@@ -42,7 +44,7 @@ trait LoadableGallery extends LoadableResource {
 /**
   * Cacheable (immutable) gallery resource
   */
-trait CacheableGallery extends LoadableGallery with Serializable
+trait CacheableGallery extends LoadableGallery
 
 /**
   * File resource
@@ -55,5 +57,16 @@ trait LoadableFile extends LoadableResource {
 
   override def toString: String = {
     s"LoadableFile[$loader]($url, ${hierarchy.mkString("/", "/", "/") + fileName.getOrElse("<auto>")}, ref = ${referrer.getOrElse("<none>")}, cookies = ${if (cookies.isEmpty) "<none>" else cookies.mkString("; ")})"
+  }
+}
+
+/**
+  * Generated file resource
+  */
+trait FileGenerator extends LoadableFile {
+  def write(os: OutputStream): Unit
+
+  override def toString: String = {
+    s"FileGenerator[$loader]($url, ${hierarchy.mkString("/", "/", "/") + fileName.getOrElse("<auto>")}, ref = ${referrer.getOrElse("<none>")}, cookies = ${if (cookies.isEmpty) "<none>" else cookies.mkString("; ")})"
   }
 }

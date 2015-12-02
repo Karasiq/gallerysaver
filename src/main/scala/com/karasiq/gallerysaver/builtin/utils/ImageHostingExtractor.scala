@@ -16,7 +16,18 @@ object ImageHostingExtractor {
 
   @inline
   private def extractImage(url: String, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): Iterator[AnyRef] = {
-    Iterator.continually(webClient.withGetHtmlPage(url)(getImage)).take(1).flatMap(_.toIterator)
+    Iterator.fill(1)(webClient.withGetHtmlPage(url)(getImage)).flatMap(_.toIterator)
+  }
+
+  def unifyToUrl: PartialFunction[AnyRef, String] = {
+    case ImagePreview(a) ⇒
+      a.fullHref
+
+    case a: HtmlAnchor ⇒
+      a.fullHref
+
+    case url: String ⇒
+      url
   }
 
   /**
@@ -26,11 +37,8 @@ object ImageHostingExtractor {
     * @return Hosting expander function
     */
   def expandImageHostingC(predicate: String ⇒ Boolean, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): PartialFunction[AnyRef, Iterator[AnyRef]] = {
-    case a: HtmlAnchor if predicate(a.fullHref) ⇒
-      extractImage(a.fullHref, getImage)
-
-    case url: String if predicate(url) ⇒
-      extractImage(url, getImage)
+    case v if unifyToUrl.isDefinedAt(v) && predicate(unifyToUrl(v)) ⇒
+      extractImage(unifyToUrl(v), getImage)
   }
 
   /**
@@ -54,7 +62,7 @@ object ImageHostingExtractor {
     expandImageHostingR(Regex.quote(urlStart), getImage)
   }
 
-  def partialFunction: PartialFunction[AnyRef, Iterator[AnyRef]] = {
+  def predefinedExtractors: PartialFunction[AnyRef, Iterator[AnyRef]] = {
     Vector(
       expandImageHosting("postimg.org/image/",
         _.elementOption(_.getFirstByXPath[HtmlImage]("/html/body/center/img"))),
@@ -119,6 +127,6 @@ object ImageHostingExtractor {
   }
 
   def unapply(a: AnyRef): Option[Iterator[String]] = {
-    partialFunction.andThen(_.collect(ImageExpander.downloadableUrl)).lift(a)
+    predefinedExtractors.andThen(_.collect(ImageExpander.downloadableUrl)).lift(a)
   }
 }

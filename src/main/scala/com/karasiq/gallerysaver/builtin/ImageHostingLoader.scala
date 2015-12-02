@@ -23,7 +23,7 @@ class ImageHostingLoader(ec: ExecutionContext) extends GalleryLoader {
     * @return Loader can load URL
     */
   override def canLoadUrl(url: String): Boolean = {
-    ImageHostingExtractor.partialFunction.isDefinedAt(url)
+    ImageHostingExtractor.predefinedExtractors.isDefinedAt(url)
   }
 
   /**

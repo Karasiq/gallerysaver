@@ -6,7 +6,11 @@ import akka.actor.ActorRef
 import akka.util.Timeout
 import com.karasiq.gallerysaver.builtin.PreviewsResource
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
+import com.karasiq.gallerysaver.imageconverter.FileDownloaderImageConverter
+import com.karasiq.gallerysaver.mapdb.FileDownloaderHistory
 import com.karasiq.gallerysaver.scripting.resources.LoadableResource
+import com.karasiq.mapdb.MapDbFile
+import com.typesafe.config.Config
 
 import scala.collection.GenTraversableOnce
 import scala.concurrent.duration._
@@ -15,7 +19,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 // Used only in scripts
-final class LoaderUtils(executionContext: ExecutionContext, gallerySaverDispatcher: ActorRef) {
+final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: ExecutionContext, gallerySaverDispatcher: ActorRef) {
   import akka.pattern.ask
 
   private implicit def ec = executionContext
@@ -99,5 +103,13 @@ final class LoaderUtils(executionContext: ExecutionContext, gallerySaverDispatch
     val fixedFile = URLParser(parsedUrl).file.path.split('/').filter(_.nonEmpty).map(fixName).mkString("/", "/", "")
     val query = Option(parsedUrl.getQuery).fold("")("?" + _)
     new URL(parsedUrl.getProtocol, parsedUrl.getHost, fixedFile + query).toString
+  }
+
+  lazy val fdHistory: FileDownloaderHistory = {
+    new FileDownloaderHistory(mapDbFile)
+  }
+
+  lazy val fdConverter: FileDownloaderImageConverter = {
+    FileDownloaderImageConverter.fromConfig(config.getConfig("gallery-saver.image-converter"))
   }
 }

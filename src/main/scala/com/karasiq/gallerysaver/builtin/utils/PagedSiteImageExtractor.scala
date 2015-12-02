@@ -16,7 +16,7 @@ trait PagedSiteImageExtractor {
   }
 
   protected def imageExpander: ExpanderFunction[AnyRef] =
-    sequencedFilter(previews, ImageHostingExtractor.partialFunction.orElse(extensionFilter().asExpanderFunction))
+    sequencedFilter(previews, extensionFilter())
 
   protected def anchorExpander: ExpanderFunction[AnyRef] =
     extensionFilter()

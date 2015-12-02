@@ -1,4 +1,5 @@
 import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlPage}
+import com.karasiq.gallerysaver.builtin.utils.ImageExpander._
 import com.karasiq.gallerysaver.builtin.utils.PagedSiteImageExtractor
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources.{FileResource, LoadableGallery, LoadableResource}
@@ -9,6 +10,10 @@ import scala.concurrent.Future
 case class BlogspotBlog(url: String, hierarchy: Seq[String] = Seq("blogspot"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty, loader: String = "blogspot-blog") extends LoadableGallery
 
 class BlogspotLoader extends HtmlUnitGalleryLoader with PagedSiteImageExtractor {
+  override protected def imageExpander: ExpanderFunction[AnyRef] = {
+    sequencedFilter(previews, ImageHostingFile().orElse(extensionFilter().asExpanderFunction))
+  }
+
   override protected def nextPageOption(page: HtmlPage): Option[HtmlPage] = {
     page.firstByXPath[HtmlAnchor]("//div[@id='blog-pager']//a[@class='blog-pager-older-link']").flatMap { a ⇒
       page.getWebClient.htmlPageOption(a.fullHref)
@@ -49,7 +54,7 @@ class BlogspotLoader extends HtmlUnitGalleryLoader with PagedSiteImageExtractor 
           .fold(htmlPage)(_.click[HtmlPage]()) // Skip disclaimer
 
         getImagesIterator(page).map { case (url, name) ⇒
-          FileResource(this.id, url, Some(htmlPage.getUrl.toString), extractCookies(resource), resource.hierarchy :+ subDir, Some(name))
+          FileResource(this.id, url, Some(htmlPage.getUrl.toString), extractCookiesForUrl(url), resource.hierarchy :+ subDir, Some(name))
         }
     }
   }

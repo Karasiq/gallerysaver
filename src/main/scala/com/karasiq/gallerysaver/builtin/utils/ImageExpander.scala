@@ -1,5 +1,6 @@
 package com.karasiq.gallerysaver.builtin.utils
 
+import java.net.URL
 import java.nio.file.{Files, Paths}
 
 import com.gargoylesoftware.htmlunit.Page
@@ -9,6 +10,7 @@ import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url.URLParser
 
 import scala.collection.{GenSeq, GenTraversableOnce}
+import scala.util.Try
 
 object ImageExpander {
   import scala.language.implicitConversions
@@ -43,8 +45,12 @@ object ImageExpander {
       anchor
   }
 
+  private def isValidURL(url: ⇒ String): Boolean = {
+    Try(new URL(url)).isSuccess
+  }
+
   def extensionFilter(ext: Set[String] = defaultImageExtensions): FilterFunction[HtmlAnchor] = {
-    case a: HtmlAnchor if URLParser.isValidURL(a.fullHref) && ext.contains(URLParser(a.fullHref).file.extension.toLowerCase) ⇒
+    case a: HtmlAnchor if isValidURL(a.fullHref) && ext.contains(URLParser(a.fullHref).file.extension.toLowerCase) ⇒
       a
   }
 
@@ -60,16 +66,16 @@ object ImageExpander {
     * Unifies the HTML content to URL
     */
   def downloadableUrl: FilterFunction[String] = {
-    case img: HtmlImage if URLParser.isValidURL(img.fullSrc) ⇒
+    case img: HtmlImage if isValidURL(img.fullSrc) ⇒
       img.fullSrc
 
-    case a: HtmlAnchor if URLParser.isValidURL(a.fullHref) ⇒
+    case a: HtmlAnchor if isValidURL(a.fullHref) ⇒
       a.fullHref
 
     case a: Page ⇒
       a.getUrl.toString
 
-    case url: String if URLParser.isValidURL(url) ⇒
+    case url: String if isValidURL(url) ⇒
       url
   }
 

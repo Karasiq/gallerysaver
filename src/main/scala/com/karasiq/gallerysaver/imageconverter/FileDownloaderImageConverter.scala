@@ -6,7 +6,17 @@ import com.karasiq.fileutils.PathUtils._
 import com.karasiq.networkutils.HttpClientUtils.HttpClientCookie
 import com.karasiq.networkutils.downloader.{DownloadedFileReport, FileDownloader, LoadedFile, WrappedFileDownloader}
 import com.karasiq.networkutils.http.headers.HttpHeader
+import com.typesafe.config.Config
 import org.apache.commons.io.FilenameUtils
+
+import scala.collection.JavaConversions._
+
+
+object FileDownloaderImageConverter {
+  def fromConfig(cfg: Config): FileDownloaderImageConverter = {
+    new FileDownloaderImageConverter(new ImageIOConverter(cfg.getString("out-format")), cfg.getStringList("convert-formats").toSet, cfg.getString("suffix"))
+  }
+}
 
 /**
  * Image converter provider
@@ -38,7 +48,8 @@ class FileDownloaderImageConverter(converter: ImageConverter, extensions: Set[St
   /**
    * Image converter wrapper trait for [[com.karasiq.networkutils.downloader.FileDownloader FileDownloader]]
    */
-  trait WithImageConverter extends WrappedFileDownloader { this: FileDownloader ⇒
+  trait WithImageConverter extends WrappedFileDownloader {
+    this: FileDownloader ⇒
     abstract override protected def needLoading(url: String, directory: String, name: String, headers: Seq[HttpHeader], cookies: Traversable[HttpClientCookie]): Boolean = {
       val originalName = FileDownloader.fileNameFor(url, name)
       if (canConvert(originalName)) {
@@ -57,5 +68,4 @@ class FileDownloaderImageConverter(converter: ImageConverter, extensions: Set[St
       } else super.onSuccess(report, file)
     }
   }
-
 }

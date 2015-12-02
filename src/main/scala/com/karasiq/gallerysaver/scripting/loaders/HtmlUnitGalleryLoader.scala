@@ -10,6 +10,7 @@ import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url._
 
 import scala.collection.JavaConversions._
+import scala.util.{Failure, Success, Try}
 
 object HtmlUnitGalleryLoader {
   /**
@@ -41,15 +42,29 @@ trait HtmlUnitGalleryLoader extends GalleryLoader {
       .map(cookie ⇒ cookie.getName → cookie.getValue).toMap
   }
 
-  protected final def extractCookies(resource: LoadableResource): Map[String, String] = {
-    resource.cookies ++ extractCookies(new URL(resource.url).getHost)
+  // Used for external resources, to avoid cookie leak
+  protected final def extractCookiesForUrl(url: String): Map[String, String] = {
+    Try(this.extractCookies(new URL(url).getHost)) match {
+      case Success(cookies) ⇒
+        cookies
+
+      case Failure(_) ⇒
+        // Invalid URL
+        Map.empty
+    }
+  }
+
+  protected def extractCookies(resource: LoadableResource): Map[String, String] = {
+    resource.cookies ++ extractCookiesForUrl(resource.url)
   }
 
   protected def compileCookies(resource: LoadableResource): Iterator[Cookie] = {
-    val host = new URL(resource.url).getHost
-    resource.cookies.toIterator.map { case (k, v) ⇒
-      new Cookie(host, k, v, "/", 10000000, false)
-    }
+    Try {
+      val host = new URL(resource.url).getHost
+      resource.cookies.toIterator.map { case (k, v) ⇒
+        new Cookie(host, k, v, "/", 10000000, false)
+      }
+    } getOrElse Iterator.empty
   }
 
   protected def withResource[T <: LoadableResource](resource: LoadableResource)(f: PartialFunction[Page, Iterator[T]]): Iterator[T] = {
