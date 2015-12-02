@@ -11,9 +11,11 @@ import com.karasiq.fileutils.pathtree.PathTreeUtils._
 import com.karasiq.gallerysaver.app.guice.{GallerySaverMainModule, GallerySaverModule}
 import com.karasiq.mapdb.MapDbFile
 import com.karasiq.networkutils.HtmlUnitUtils
+import com.typesafe.config.Config
 import net.codingwell.scalaguice.InjectorExtensions._
 import org.apache.commons.io.IOUtils
 
+import scala.collection.JavaConversions._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.io.{Source, StdIn}
@@ -22,16 +24,19 @@ import scala.util.control.Exception
 import scala.util.{Failure, Success, Try}
 
 object Main extends App {
-  private def loadScriptsDirectory(engine: ScriptEngine, dir: Path): Unit = {
-    val scripts = dir.subFiles.filter(_.getFileName.toString.endsWith(".scala"))
-
+  private def loadScripts(engine: ScriptEngine, scripts: Path*): Unit = {
     scripts.foreach { sc ⇒
-      println(s"Loading plugin: $sc")
+      println(s"Executing script: $sc")
       val source = Source.fromFile(sc.toFile, "UTF-8")
       Exception.allCatch.andFinally(source.close()) {
         engine.eval(source.bufferedReader())
       }
     }
+  }
+
+  private def loadScriptsDirectory(engine: ScriptEngine, dir: Path): Unit = {
+    val scripts = dir.subFiles.filter(_.getFileName.toString.endsWith(".scala"))
+    loadScripts(engine, scripts.toSeq:_*)
   }
 
   private def startup(): Unit = {
@@ -54,14 +59,26 @@ object Main extends App {
 
     // Load scripts
     val engine = injector.instance[ScriptEngine](Names.named("scala"))
+    val config = injector.instance[Config]
 
-    Paths.get("loaders") match {
-      case loadersDir if loadersDir.isDirectory ⇒
-        loadScriptsDirectory(engine, loadersDir)
+    config.getStringList("gallery-saver.auto-exec-folders").foreach { folder ⇒
+      Paths.get(folder) match {
+        case loadersDir if loadersDir.isDirectory ⇒
+          loadScriptsDirectory(engine, loadersDir)
+
+        case _ ⇒
+          println(s"Directory $folder not found")
+      }
+    }
+
+    Paths.get("AutoExec.scala") match {
+      case autoExec if autoExec.isRegularFile ⇒
+        loadScripts(engine, autoExec)
 
       case _ ⇒
-        println("Loaders directory not found")
+        println("AutoExec.scala not found")
     }
+
 
     // REPL
     val consoleContext = new SimpleScriptContext

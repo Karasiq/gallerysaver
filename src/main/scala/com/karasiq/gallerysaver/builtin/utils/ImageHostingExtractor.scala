@@ -1,7 +1,7 @@
 package com.karasiq.gallerysaver.builtin.utils
 
 import com.gargoylesoftware.htmlunit.CookieManager
-import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlImage, HtmlInput, HtmlPage}
+import com.gargoylesoftware.htmlunit.html._
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 import scala.collection.GenTraversableOnce
@@ -59,8 +59,8 @@ object ImageHostingExtractor {
       expandImageHosting("postimg.org/image/",
         _.elementOption(_.getFirstByXPath[HtmlImage]("/html/body/center/img"))),
 
-      //      expandImageHosting("fotki.yandex.ru/",
-      //        _.firstByXPath[HtmlLink]("/html/head/link[@rel='image_src']").map(_.getHrefAttribute)),
+      expandImageHosting("fotki.yandex.ru/",
+        _.firstByXPath[HtmlLink]("/html/head/link[@rel='image_src']").map(_.getHrefAttribute)),
 
       expandImageHostingR("(img\\d+\\.)?imagevenue\\.com/img\\.php\\?",
         _.elementOption(_.getHtmlElementById[HtmlImage]("thepic"))),

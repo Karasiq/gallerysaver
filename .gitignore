@@ -4,3 +4,5 @@ gallerysaver-test.conf
 gallerysaver.conf
 galleries
 *.bat
+loaders-private
+AutoExec.scala
