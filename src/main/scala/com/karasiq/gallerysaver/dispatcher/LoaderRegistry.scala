@@ -9,6 +9,7 @@ trait LoaderRegistry {
   }
   def forId(id: String): Option[GalleryLoader]
   def forUrl(url: String): Option[GalleryLoader]
+  def idSet: Set[String]
 }
 
 

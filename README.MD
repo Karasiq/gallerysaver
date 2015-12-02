@@ -7,6 +7,11 @@ sbt run
 ```
 
 ## In REPL console
+* Print available loader IDs:
+```scala
+> Loaders.idSet
+```
+
 * Direct loading:
 ```scala
 > LoaderUtils.loadAllFiles("http://resource.com/123")

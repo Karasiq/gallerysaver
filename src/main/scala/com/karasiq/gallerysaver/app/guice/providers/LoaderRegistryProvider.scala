@@ -36,4 +36,8 @@ final class LoaderRegistryImpl extends LoaderRegistry {
   def forUrl(url: String): Option[GalleryLoader] = {
     loaders.reverseIterator.find(_._2.canLoadUrl(url)).map(_._2)
   }
+
+  override def idSet: Set[String] = {
+    loaders.map(_._1).toSet
+  }
 }

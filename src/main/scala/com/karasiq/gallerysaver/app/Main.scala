@@ -53,7 +53,7 @@ object Main extends App {
         val mapDbFile = injector.instance[MapDbFile]
         actorSystem.log.info("Shutting down GallerySaver")
         actorSystem.registerOnTermination(IOUtils.closeQuietly(mapDbFile))
-        Await.ready(actorSystem.terminate(), Duration.Inf)
+        Await.result(actorSystem.terminate(), Duration.Inf)
       }
     }))
 
@@ -84,6 +84,7 @@ object Main extends App {
     val consoleContext = new SimpleScriptContext
     val imports = Seq("com.karasiq.gallerysaver.scripting.loaders._", "com.karasiq.gallerysaver.scripting.resources._")
     imports.foreach(imp ⇒ engine.eval(s"import $imp", consoleContext))
+    println("--- REPL initialized. Awaiting input ---")
     Iterator.continually(StdIn.readLine()).takeWhile(_.ne(null)).foreach { line ⇒
       Try(engine.eval(line, consoleContext)) match {
         case Success(value) ⇒
