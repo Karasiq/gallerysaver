@@ -19,17 +19,6 @@ object ImageHostingExtractor {
     Iterator.continually(webClient.withGetHtmlPage(url)(getImage)).take(1).flatMap(_.toIterator)
   }
 
-  private def downloadableUrl: PartialFunction[AnyRef, String] = {
-    case a: HtmlAnchor ⇒
-      a.fullHref
-
-    case img: HtmlImage ⇒
-      img.fullSrc
-
-    case s: String ⇒
-      s
-  }
-
   /**
     * Expand image hosting by custom predicate
     * @param predicate Predicate function
@@ -130,6 +119,6 @@ object ImageHostingExtractor {
   }
 
   def unapply(a: AnyRef): Option[Iterator[String]] = {
-    partialFunction.andThen(_.collect(downloadableUrl)).lift(a)
+    partialFunction.andThen(_.collect(ImageExpander.downloadableUrl)).lift(a)
   }
 }
