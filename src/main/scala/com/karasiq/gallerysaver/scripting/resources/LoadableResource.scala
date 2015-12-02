@@ -1,4 +1,4 @@
-package com.karasiq.gallerysaver.scripting
+package com.karasiq.gallerysaver.scripting.resources
 
 /**
   * Generic internet resource

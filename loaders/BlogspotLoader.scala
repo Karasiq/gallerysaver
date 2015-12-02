@@ -1,6 +1,7 @@
 import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlPage}
 import com.karasiq.gallerysaver.builtin.utils.PagedSiteImageExtractor
-import com.karasiq.gallerysaver.scripting.{FileResource, HtmlUnitGalleryLoader, LoadableGallery, LoadableResource}
+import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
+import com.karasiq.gallerysaver.scripting.resources.{FileResource, LoadableGallery, LoadableResource}
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 import scala.concurrent.Future

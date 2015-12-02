@@ -5,7 +5,7 @@ import javax.script.ScriptEngine
 import akka.actor.ActorRef
 import com.google.inject.{AbstractModule, Singleton}
 import com.karasiq.gallerysaver.app.guice.providers._
-import com.karasiq.gallerysaver.scripting.LoaderRegistry
+import com.karasiq.gallerysaver.dispatcher.LoaderRegistry
 import net.codingwell.scalaguice.ScalaModule
 
 import scala.concurrent.ExecutionContext

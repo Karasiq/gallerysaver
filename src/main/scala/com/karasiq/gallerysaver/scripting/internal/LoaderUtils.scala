@@ -1,4 +1,4 @@
-package com.karasiq.gallerysaver.scripting
+package com.karasiq.gallerysaver.scripting.internal
 
 import java.net.{URL, URLEncoder}
 
@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import akka.util.Timeout
 import com.karasiq.gallerysaver.builtin.PreviewsResource
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
+import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 
 import scala.collection.GenTraversableOnce
 import scala.concurrent.duration._

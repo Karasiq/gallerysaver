@@ -1,7 +1,8 @@
 package com.karasiq.gallerysaver.builtin
 
 import com.karasiq.gallerysaver.builtin.utils.ImageHostingExtractor
-import com.karasiq.gallerysaver.scripting._
+import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
+import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableResource}
 
 import scala.concurrent.{ExecutionContext, Future}
 

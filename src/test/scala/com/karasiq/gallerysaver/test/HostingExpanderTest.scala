@@ -1,4 +1,6 @@
-import com.karasiq.gallerysaver.scripting.LoaderUtils
+package com.karasiq.gallerysaver.test
+
+import com.karasiq.gallerysaver.scripting.internal.LoaderUtils
 import org.scalatest.FreeSpec
 
 import scala.collection.JavaConversions._

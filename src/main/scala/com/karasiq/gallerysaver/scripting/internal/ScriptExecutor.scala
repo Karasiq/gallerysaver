@@ -1,4 +1,4 @@
-package com.karasiq.gallerysaver.scripting
+package com.karasiq.gallerysaver.scripting.internal
 
 import java.io.Reader
 import javax.script.ScriptEngine

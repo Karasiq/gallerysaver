@@ -1,3 +1,5 @@
+package com.karasiq.gallerysaver.test
+
 import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.karasiq.gallerysaver.app.guice.providers.ExternalConfigProvider

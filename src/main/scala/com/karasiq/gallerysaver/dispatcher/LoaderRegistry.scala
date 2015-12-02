@@ -1,4 +1,6 @@
-package com.karasiq.gallerysaver.scripting
+package com.karasiq.gallerysaver.dispatcher
+
+import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
 
 trait LoaderRegistry {
   def register(loader: GalleryLoader): this.type

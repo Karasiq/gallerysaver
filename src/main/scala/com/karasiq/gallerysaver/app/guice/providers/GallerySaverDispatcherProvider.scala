@@ -5,8 +5,7 @@ import javax.inject.Named
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.google.inject.{Inject, Provider}
-import com.karasiq.gallerysaver.dispatcher.GallerySaverDispatcher
-import com.karasiq.gallerysaver.scripting.LoaderRegistry
+import com.karasiq.gallerysaver.dispatcher.{GallerySaverDispatcher, LoaderRegistry}
 import com.karasiq.mapdb.MapDbFile
 import com.typesafe.config.Config
 

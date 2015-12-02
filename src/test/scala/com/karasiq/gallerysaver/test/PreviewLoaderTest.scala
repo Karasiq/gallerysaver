@@ -1,3 +1,5 @@
+package com.karasiq.gallerysaver.test
+
 import akka.pattern.ask
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
 import org.scalatest.{FlatSpec, Matchers}

@@ -2,7 +2,8 @@ package com.karasiq.gallerysaver.app.guice.providers
 
 import com.google.inject.{Inject, Provider}
 import com.karasiq.gallerysaver.builtin.{ImageHostingLoader, PreviewLoader}
-import com.karasiq.gallerysaver.scripting.{GalleryLoader, LoaderRegistry}
+import com.karasiq.gallerysaver.dispatcher.LoaderRegistry
+import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext

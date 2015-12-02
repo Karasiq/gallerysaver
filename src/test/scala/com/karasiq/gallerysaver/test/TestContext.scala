@@ -1,3 +1,5 @@
+package com.karasiq.gallerysaver.test
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.util.Timeout
 import com.google.inject.Guice
@@ -9,7 +11,7 @@ import net.codingwell.scalaguice.InjectorExtensions._
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-object TestContext {
+private[test] object TestContext {
   val injector = Guice.createInjector(new GallerySaverTestModule, new GallerySaverModule)
 
   val actorSystem = injector.instance[ActorSystem]

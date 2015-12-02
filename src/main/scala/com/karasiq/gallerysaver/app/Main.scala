@@ -82,6 +82,9 @@ object Main extends App {
 
     // REPL
     val consoleContext = new SimpleScriptContext
+    val imports = Seq("com.karasiq.gallerysaver.scripting.loaders._", "com.karasiq.gallerysaver.scripting.resources._")
+    imports.foreach(imp ⇒ engine.eval(s"import $imp", consoleContext))
+
     Iterator.continually(StdIn.readLine("> ")).takeWhile(_.ne(null)).foreach { line ⇒
       Try(engine.eval(line, consoleContext)) match {
         case Success(value) ⇒

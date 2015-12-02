@@ -2,7 +2,8 @@ package com.karasiq.gallerysaver.builtin
 
 import com.gargoylesoftware.htmlunit.html.{HtmlImage, HtmlPage}
 import com.karasiq.gallerysaver.builtin.utils.{ImageAnchor, ImagePreview}
-import com.karasiq.gallerysaver.scripting._
+import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
+import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableFile, LoadableResource}
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 import scala.concurrent.{ExecutionContext, Future}

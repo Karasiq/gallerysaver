@@ -3,7 +3,8 @@ import com.gargoylesoftware.htmlunit.{BrowserVersion, WebClient}
 import com.karasiq.common.{StringUtils, ThreadLocalFactory}
 import com.karasiq.fileutils.PathUtils
 import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
-import com.karasiq.gallerysaver.scripting._
+import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
+import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableGallery, LoadableResource}
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url.{URLParser, _}
 import eu.timepit.refined.numeric.Positive

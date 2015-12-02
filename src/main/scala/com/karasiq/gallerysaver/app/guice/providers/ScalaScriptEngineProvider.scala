@@ -6,7 +6,8 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.event.Logging
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Provider}
-import com.karasiq.gallerysaver.scripting.{LoaderRegistry, LoaderUtils, ScriptExecutor}
+import com.karasiq.gallerysaver.dispatcher.LoaderRegistry
+import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, ScriptExecutor}
 import com.typesafe.config.Config
 
 import scala.concurrent.ExecutionContext

@@ -9,7 +9,8 @@ import java.util.Date
 
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
-import com.karasiq.gallerysaver.scripting._
+import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
+import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.mapdb.MapDbWrapper.MapDbTreeMap
 import com.karasiq.mapdb.serialization.MapDbSerializer
 import com.karasiq.mapdb.{MapDbFile, MapDbWrapper}
@@ -18,9 +19,16 @@ import org.apache.http.impl.cookie.BasicClientCookie
 import org.mapdb.Serializer
 
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 object GallerySaverDispatcher {
+  /**
+    * Converts [[com.karasiq.gallerysaver.scripting.resources.LoadableFile LoadableFile]] to [[com.karasiq.networkutils.downloader.FileToDownload FileToDownload]]
+    * @param directory Destination directory
+    * @param f File resource descriptor
+    * @return File downloader actor structure
+    * @see [[com.karasiq.networkutils.downloader.FileDownloaderActor FileDownloaderActor]]
+    */
   def asFileToDownload(directory: Path, f: LoadableFile): FileToDownload = {
     val path = Paths.get(directory.toString, f.hierarchy:_*)
     val host = new URL(f.url).getHost
@@ -59,6 +67,13 @@ object GallerySaverDispatcher {
   }
 }
 
+/**
+  * Main resource loading dispatcher
+  * @param rootDirectory Destination directory
+  * @param mapDbFile Cache file
+  * @param fileDownloader File downloader actor
+  * @param loaders Loaders registry
+  */
 class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDownloader: ActorRef, loaders: LoaderRegistry) extends Actor with ActorLogging {
   import context.dispatcher
 
@@ -75,12 +90,12 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
       .valuesOutsideNodesEnable()
     )
 
-    cache.get(cg.url) match {
-      case Some(resources) ⇒
+    Try(cache.get(cg.url)) match {
+      case Success(Some(resources)) ⇒
         log.debug("Found in cache: {}", cg)
         sender ! GallerySaverDispatcher.patchResources(resources, cg)
 
-      case None ⇒
+      case _ ⇒
         log.debug("Caching resource: {}", cg)
         loader.load(cg).onComplete {
           case Success(resources) ⇒

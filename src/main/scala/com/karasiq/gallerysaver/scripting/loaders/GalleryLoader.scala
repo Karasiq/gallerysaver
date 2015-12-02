@@ -1,6 +1,7 @@
-package com.karasiq.gallerysaver.scripting
+package com.karasiq.gallerysaver.scripting.loaders
 
 import akka.actor.ActorRef
+import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 
 import scala.concurrent.Future
 

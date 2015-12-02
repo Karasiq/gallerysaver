@@ -1,10 +1,11 @@
-package com.karasiq.gallerysaver.scripting
+package com.karasiq.gallerysaver.scripting.loaders
 
 import java.net.URL
 
 import com.gargoylesoftware.htmlunit.util.Cookie
 import com.gargoylesoftware.htmlunit.{CookieManager, Page, WebClient}
 import com.karasiq.common.ThreadLocalFactory
+import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url._
 
