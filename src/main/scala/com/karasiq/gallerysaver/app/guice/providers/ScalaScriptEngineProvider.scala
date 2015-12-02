@@ -21,7 +21,7 @@ class ScalaScriptEngineProvider @Inject()(config: Config, @Named("gallerySaverDi
         scalaInterpreter.bind("Loaders", registry)
         scalaInterpreter.bind("Dispatcher", gallerySaverDispatcher)
         scalaInterpreter.bind("Akka", actorSystem)
-        scalaInterpreter.bind("LoaderUtils", new LoaderUtils(actorSystem, executionContext, gallerySaverDispatcher))
+        scalaInterpreter.bind("LoaderUtils", new LoaderUtils(executionContext, gallerySaverDispatcher))
         scalaInterpreter.bind("LoaderPool", executionContext)
         scalaInterpreter.bind("Scripts", new ScriptExecutor(scalaInterpreter))
         scalaInterpreter.bind("Config", config)

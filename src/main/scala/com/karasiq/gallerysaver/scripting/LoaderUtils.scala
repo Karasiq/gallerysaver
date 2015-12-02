@@ -2,7 +2,7 @@ package com.karasiq.gallerysaver.scripting
 
 import java.net.{URL, URLEncoder}
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import akka.util.Timeout
 import com.karasiq.gallerysaver.builtin.PreviewsResource
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
@@ -14,11 +14,11 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 // Used only in scripts
-final class LoaderUtils(actorSystem: ActorSystem, executionContext: ExecutionContext, gallerySaverDispatcher: ActorRef) {
-  import actorSystem.dispatcher
+final class LoaderUtils(executionContext: ExecutionContext, gallerySaverDispatcher: ActorRef) {
   import akka.pattern.ask
 
-  private implicit val timeout = Timeout(5 minutes)
+  private implicit def ec = executionContext
+  private implicit def timeout = Timeout(5 minutes)
 
   def threadPool(): ExecutionContext = executionContext
 
