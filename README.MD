@@ -18,6 +18,25 @@ sbt run
 > Scripts.evalFile("ExampleScript.scala")
 ```
 
+# Fast batch loading
+* Write in `scripts/AutoExec.scala`:
+```scala
+object Shortcuts {
+  def exampleAction(): Unit = {
+    // Do something
+    ...
+    
+    // Or execute script
+    Scripts.evalFile("scripts/Example.scala")
+  }
+}
+```
+
+* Call it from REPL:
+```scala
+> Shortcuts.exampleAction()
+```
+
 # Creating custom loader
 * Create file `Example.scala` (put it in `loaders`, or `loaders-private` directory for automatic loading, or execute it manually)
 

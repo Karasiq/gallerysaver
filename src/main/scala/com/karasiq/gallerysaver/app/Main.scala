@@ -71,12 +71,12 @@ object Main extends App {
       }
     }
 
-    Paths.get("AutoExec.scala") match {
+    Paths.get(config.getString("gallery-saver.auto-exec-script")) match {
       case autoExec if autoExec.isRegularFile ⇒
         loadScripts(engine, autoExec)
 
-      case _ ⇒
-        println("AutoExec.scala not found")
+      case f ⇒
+        println(s"$f not found")
     }
 
 
@@ -84,8 +84,7 @@ object Main extends App {
     val consoleContext = new SimpleScriptContext
     val imports = Seq("com.karasiq.gallerysaver.scripting.loaders._", "com.karasiq.gallerysaver.scripting.resources._")
     imports.foreach(imp ⇒ engine.eval(s"import $imp", consoleContext))
-
-    Iterator.continually(StdIn.readLine("> ")).takeWhile(_.ne(null)).foreach { line ⇒
+    Iterator.continually(StdIn.readLine()).takeWhile(_.ne(null)).foreach { line ⇒
       Try(engine.eval(line, consoleContext)) match {
         case Success(value) ⇒
           if (value.ne(null)) {

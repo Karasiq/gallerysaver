@@ -22,7 +22,7 @@ lazy val rootSettings = Seq(
   mainClass in Compile := Some("com.karasiq.gallerysaver.app.Main"),
   fork in run := true,
   fork in test := true,
-  connectInput := true
+  connectInput in run := true
 )
 
 lazy val root = Project("gallerysaver", file("."))
