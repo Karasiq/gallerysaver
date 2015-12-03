@@ -27,17 +27,21 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
 
   def threadPool(): ExecutionContext = executionContext
 
-  def loadAllFiles(resource: LoadableResource): Unit = {
-    get(resource).foreach {
-      case LoadedResources(resources) ⇒
-        resources.foreach(this.loadAllFiles)
+  def loadAllResources(resources: LoadableResource*): Unit = {
+    resources.foreach { resource ⇒
+      get(resource).foreach {
+        case LoadedResources(r) ⇒
+          this.loadAllResources(r:_*)
+      }
     }
   }
 
-  def loadAllFiles(url: String): Unit = {
-    get(url).foreach {
-      case LoadedResources(resources) ⇒
-        resources.foreach(this.loadAllFiles)
+  def loadAllUrls(urls: String*): Unit = {
+    urls.foreach { url ⇒
+      get(url).foreach {
+        case LoadedResources(r) ⇒
+          this.loadAllResources(r:_*)
+      }
     }
   }
 

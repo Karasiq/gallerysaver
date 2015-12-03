@@ -14,8 +14,8 @@ sbt run
 
 * Direct loading:
 ```scala
-> LoaderUtils.loadAllFiles("http://resource.com/123")
-> LoaderUtils.loadAllFiles(GalleryResource("explicit-loader-id", "http://resource.com/321", hierarchy = Seq("example", "destination", "directory")))
+> LoaderUtils.loadAllUrls("http://resource.com/123", "http://resource2.com/123")
+> LoaderUtils.loadAllResources(GalleryResource("explicit-loader-id", "http://resource.com/321", hierarchy = Seq("example", "destination", "directory")))
 ```
 
 * Execute script:
