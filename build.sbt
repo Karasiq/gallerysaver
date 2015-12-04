@@ -1,7 +1,7 @@
 lazy val rootSettings = Seq(
   name := "gallerysaver",
-  isSnapshot := true,
-  version := "1.0-SNAPSHOT",
+  isSnapshot := false,
+  version := "1.0.0-M1",
   scalaVersion := "2.11.7",
   resolvers += Resolver.sonatypeRepo("snapshots"),
   libraryDependencies ++= {
