@@ -47,6 +47,11 @@ trait LoadableGallery extends LoadableResource {
 trait CacheableGallery extends LoadableGallery
 
 /**
+  * Marks infinite gallery resource (must be limited before loading)
+  */
+trait InfiniteGallery extends LoadableGallery
+
+/**
   * File resource
   */
 trait LoadableFile extends LoadableResource {

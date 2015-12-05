@@ -8,7 +8,7 @@ import com.karasiq.gallerysaver.builtin.PreviewsResource
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
 import com.karasiq.gallerysaver.imageconverter.FileDownloaderImageConverter
 import com.karasiq.gallerysaver.mapdb.FileDownloaderHistory
-import com.karasiq.gallerysaver.scripting.resources.LoadableResource
+import com.karasiq.gallerysaver.scripting.resources.{InfiniteGallery, LoadableFile, LoadableResource}
 import com.karasiq.mapdb.MapDbFile
 import com.typesafe.config.Config
 
@@ -27,12 +27,40 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
 
   def threadPool(): ExecutionContext = executionContext
 
-  def loadAllResources(resources: LoadableResource*): Unit = {
-    resources.foreach { resource ⇒
-      get(resource).foreach {
-        case LoadedResources(r) ⇒
-          this.loadAllResources(r:_*)
+  def extractAllFiles(resources: LoadableResource*): Iterator[LoadableFile] = {
+    def extract(resources: Iterator[LoadableResource]): Iterator[LoadableFile] = {
+      val futures = resources.map {
+        case lf: LoadableFile ⇒
+          Future.successful(Iterator.single(lf))
+
+        case lr: LoadableResource ⇒
+          get(lr).map(r ⇒ extract(r.resources.iterator))
       }
+
+      futures.flatMap { future ⇒
+        Try(await(future)) match {
+          case Success(r) ⇒
+            r
+
+          case Failure(_) ⇒
+            Iterator.empty
+        }
+      }
+    }
+
+    extract(resources.iterator)
+  }
+
+  def loadAllResources(resources: LoadableResource*): Unit = {
+    resources.foreach {
+      case ig: InfiniteGallery ⇒
+        throw new IllegalArgumentException(s"Couldn't load infinite gallery: $ig")
+
+      case lr: LoadableResource ⇒
+        get(lr).foreach {
+          case LoadedResources(r) ⇒
+            this.loadAllResources(r:_*)
+        }
     }
   }
 
@@ -49,6 +77,10 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
     Future(f)(this.threadPool())
   }
 
+  def await[T](future: Future[T]): T = {
+    Await.result(future, timeout.duration)
+  }
+
   def get(url: String): Future[LoadedResources] = {
     (gallerySaverDispatcher ? url).mapTo[LoadedResources]
   }
@@ -59,7 +91,7 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
 
   def asResourcesStream(futures: GenTraversableOnce[Future[LoadedResources]]): LoadedResources = {
     LoadedResources(futures.toStream.flatMap { future ⇒
-      Try(Await.result(future, timeout.duration)) match {
+      Try(await(future)) match {
         case Success(LoadedResources(resources)) ⇒
           resources
 
@@ -71,11 +103,11 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
 
   // For debug purposes
   def getSync(url: String): LoadedResources = {
-    asResourcesStream(Seq(get(url)))
+    await(get(url))
   }
 
   def getSync(resource: LoadableResource): LoadedResources = {
-    asResourcesStream(Seq(get(resource)))
+    await(get(resource))
   }
 
   def traverse(url: String): Future[LoadedResources] = {
