@@ -51,7 +51,7 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
     extract(resources.iterator)
   }
 
-  def loadAllResources(resources: LoadableResource*): Unit = {
+  private def load(resources: Iterator[LoadableResource]): Unit = {
     resources.foreach {
       case ig: InfiniteGallery ⇒
         throw new IllegalArgumentException(s"Couldn't load infinite gallery: $ig")
@@ -59,16 +59,20 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
       case lr: LoadableResource ⇒
         get(lr).foreach {
           case LoadedResources(r) ⇒
-            this.loadAllResources(r:_*)
+            load(r.iterator)
         }
     }
+  }
+
+  def loadAllResources(resources: LoadableResource*): Unit = {
+    load(resources.iterator)
   }
 
   def loadAllUrls(urls: String*): Unit = {
     urls.foreach { url ⇒
       get(url).foreach {
         case LoadedResources(r) ⇒
-          this.loadAllResources(r:_*)
+          load(r.iterator)
       }
     }
   }
