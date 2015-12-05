@@ -4,7 +4,7 @@ import java.net.{URL, URLEncoder}
 
 import akka.actor.ActorRef
 import akka.util.Timeout
-import com.karasiq.gallerysaver.builtin.PreviewsResource
+import com.karasiq.gallerysaver.builtin.{ImageHostingResource, PreviewsResource}
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
 import com.karasiq.gallerysaver.imageconverter.FileDownloaderImageConverter
 import com.karasiq.gallerysaver.mapdb.FileDownloaderHistory
@@ -114,12 +114,12 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
     get(url).map(r ⇒ asResourcesStream(r.resources.map(get)))
   }
 
-  def loadByPreview(url: String, path: Seq[String]): Future[LoadedResources] = {
+  def loadByPreview(url: String, path: Seq[String] = Seq("previews", "unsorted")): Future[LoadedResources] = {
     (gallerySaverDispatcher ? PreviewsResource(url, path)).mapTo[LoadedResources]
   }
 
-  def loadImageHosting(url: String, path: Seq[String]): Future[LoadedResources] = {
-    (gallerySaverDispatcher ? PreviewsResource(url, path)).mapTo[LoadedResources]
+  def loadImageHosting(url: String, path: Seq[String] = Seq("imagehosting", "unsorted")): Future[LoadedResources] = {
+    (gallerySaverDispatcher ? ImageHostingResource(url, path)).mapTo[LoadedResources]
   }
 
   /**
