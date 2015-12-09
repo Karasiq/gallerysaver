@@ -5,5 +5,5 @@ import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 case class LoadedResources(resources: Seq[LoadableResource])
 
 object LoadedResources {
-  val empty: LoadedResources = LoadedResources(Seq.empty)
+  val empty: LoadedResources = LoadedResources(Nil)
 }
