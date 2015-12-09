@@ -220,7 +220,7 @@ class FlickrPhotoLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     withResource(resource) {
       case Photo(id, title, url) ⇒
-        Iterator(FileResource(this.id, url, Some(resource.url), extractCookies(resource), resource.hierarchy, Some(s"$title [$id].jpg")))
+        Iterator.single(FileResource(this.id, url, Some(resource.url), extractCookies(resource), resource.hierarchy, Some(s"$title [$id].jpg")))
     }
   }
 }

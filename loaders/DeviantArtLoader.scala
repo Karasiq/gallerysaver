@@ -105,7 +105,7 @@ class DeviantArtPhotoLoader extends HtmlUnitGalleryLoader {
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     withResource(resource) {
       case page @ Photo(image) ⇒
-        Iterator(FileResource(this.id, image, Some(page.getUrl.toString), extractCookies(resource), resource.hierarchy))
+        Iterator.single(FileResource(this.id, image, Some(page.getUrl.toString), extractCookies(resource), resource.hierarchy))
     }
   }
 }
