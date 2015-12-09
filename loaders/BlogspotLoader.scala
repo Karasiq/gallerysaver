@@ -36,8 +36,8 @@ class BlogspotLoader extends HtmlUnitGalleryLoader with PagedSiteImageExtractor 
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(BlogspotBlog(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    BlogspotBlog(url)
   }
 
   /**

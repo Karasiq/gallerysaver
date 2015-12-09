@@ -93,8 +93,8 @@ class DeviantArtPhotoLoader extends HtmlUnitGalleryLoader {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(DeviantArtPhoto(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    DeviantArtPhoto(url)
   }
 
   /**
@@ -132,8 +132,8 @@ class DeviantArtGalleryLoader extends HtmlUnitGalleryLoader {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(DeviantArtGallery(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    DeviantArtGallery(url)
   }
 
   /**

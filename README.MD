@@ -63,8 +63,9 @@ class ExampleLoader extends GalleryLoader { // Or use HtmlUnitGalleryLoader for 
     url.contains("http://example.com")
   }
   
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successfully(Iterator(ExampleGallery(url))) // Just wrap URL as resource
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    // Just wrap URL as resources
+    ExampleGallery(url)
   }
   
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {

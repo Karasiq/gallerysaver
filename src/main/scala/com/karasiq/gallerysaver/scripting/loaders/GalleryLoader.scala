@@ -5,6 +5,9 @@ import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 
 import scala.concurrent.Future
 
+/**
+  * Basic gallery loader
+  */
 trait GalleryLoader {
   /**
     * Loader ID

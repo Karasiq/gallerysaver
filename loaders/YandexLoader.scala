@@ -78,8 +78,8 @@ class YandexPhotoLoader extends HtmlUnitGalleryLoader {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(YandexPhoto(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    YandexPhoto(url)
   }
 
   /**
@@ -115,8 +115,8 @@ class YandexGalleryLoader extends HtmlUnitGalleryLoader {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(YandexGallery(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    YandexGallery(url)
   }
 
   /**

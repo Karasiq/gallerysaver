@@ -136,8 +136,8 @@ class TumblrPostLoader extends HtmlUnitGalleryLoader {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(TumblrPost(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    TumblrPost(url)
   }
 
   /**
@@ -175,8 +175,8 @@ class TumblrArchiveLoader extends HtmlUnitGalleryLoader {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(TumblrArchive(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    TumblrArchive(url)
   }
 
   /**

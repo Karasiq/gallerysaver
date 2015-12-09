@@ -36,7 +36,7 @@ class PreviewLoader(ec: ExecutionContext) extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(PreviewsResource(url, loader = this.id)))
+    Future.successful(Iterator.single(PreviewsResource(url, loader = this.id)))
   }
 
   /**

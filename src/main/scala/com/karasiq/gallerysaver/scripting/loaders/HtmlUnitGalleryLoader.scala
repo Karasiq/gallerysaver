@@ -12,6 +12,7 @@ import com.karasiq.networkutils.url._
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}
 
+// TODO: Dispatch, JSoup, JSON wrappers
 object HtmlUnitGalleryLoader {
   /**
     * Creates new cookie manager
@@ -35,6 +36,9 @@ object HtmlUnitGalleryLoader {
   }
 }
 
+/**
+  * Basic HtmlUnit loader
+  */
 trait HtmlUnitGalleryLoader extends GalleryLoader {
   protected final def extractCookies(domain: String): Map[String, String] = {
     webClient.getCookieManager.getCookies

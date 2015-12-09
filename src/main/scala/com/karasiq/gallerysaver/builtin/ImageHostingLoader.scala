@@ -32,7 +32,7 @@ class ImageHostingLoader(ec: ExecutionContext) extends GalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(ImageHostingResource(url, loader = this.id)))
+    Future.successful(Iterator.single(ImageHostingResource(url, loader = this.id)))
   }
 
   /**

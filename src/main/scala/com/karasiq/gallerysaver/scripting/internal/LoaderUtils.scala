@@ -1,8 +1,10 @@
 package com.karasiq.gallerysaver.scripting.internal
 
 import java.net.{URL, URLEncoder}
+import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorRef
+import akka.pattern.ask
 import akka.util.Timeout
 import com.karasiq.gallerysaver.builtin.{ImageHostingResource, PreviewsResource}
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
@@ -13,20 +15,35 @@ import com.karasiq.mapdb.MapDbFile
 import com.typesafe.config.Config
 
 import scala.collection.GenTraversableOnce
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-// Used only in scripts
-final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: ExecutionContext, gallerySaverDispatcher: ActorRef) {
-  import akka.pattern.ask
+/**
+  * Loader scripting helper
+  * @param config Configuration
+  * @param mapDbFile MapDB instance
+  * @param ec Execution context
+  * @param gallerySaverDispatcher Primary loader dispatcher
+  */
+final class LoaderUtils(config: Config, mapDbFile: MapDbFile, ec: ExecutionContext, gallerySaverDispatcher: ActorRef) {
+  private implicit val timeout = {
+    Timeout(config.getDuration("gallery-saver.future-timeout", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
+  }
 
-  private implicit def ec = executionContext
-  private implicit def timeout = Timeout(5 minutes)
+  private val tagUtil = TagUtil(config.getConfig("gallery-saver"))
 
-  def threadPool(): ExecutionContext = executionContext
+  /**
+    * Default execution context
+    * @return [[scala.concurrent.ExecutionContext ExecutionContext]]
+    */
+  implicit def executionContext: ExecutionContext = ec
 
+  /**
+    * Performs full traverse and extracts all available files
+    * @param resources Resources
+    * @return Iterator of all available files
+    */
   def extractAllFiles(resources: LoadableResource*): Iterator[LoadableFile] = {
     def extract(resources: Iterator[LoadableResource]): Iterator[LoadableFile] = {
       val futures = resources.map {
@@ -64,10 +81,28 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
     }
   }
 
+  /**
+    * Downloads provided file
+    * @param file Loadable file
+    */
+  def download(file: LoadableFile): Unit = {
+    gallerySaverDispatcher ! file
+  }
+
+  /**
+    * Performs full traverse and downloads all available files
+    * @param resources Resources
+    * @note Infinite galleries not supported, use [[com.karasiq.gallerysaver.scripting.internal.LoaderUtils#extractAllFiles extractAllFiles]] instead
+    */
   def loadAllResources(resources: LoadableResource*): Unit = {
     load(resources.iterator)
   }
 
+  /**
+    * Performs full traverse and downloads all available files
+    * @param urls Resource URLs
+    * @note Infinite galleries not supported, use [[com.karasiq.gallerysaver.scripting.internal.LoaderUtils#extractAllFiles extractAllFiles]] instead
+    */
   def loadAllUrls(urls: String*): Unit = {
     urls.foreach { url ⇒
       get(url).foreach {
@@ -77,22 +112,61 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
     }
   }
 
-  def future[T](f: ⇒ T): Future[T] = {
-    Future(f)(this.threadPool())
+  /**
+    * Wraps single resource as resources future
+    * @param f Resource provider function
+    * @tparam T Resource type
+    * @return Resources iterator future
+    */
+  def asResourcesFuture[T <: LoadableResource](f: ⇒ T): Future[Iterator[T]] = {
+    Future.fromTry(Try(Iterator.single(f)))
   }
 
+  /**
+    * Creates future from provided function, using default [[scala.concurrent.ExecutionContext execution context]]
+    * @param f Function
+    * @tparam T Result type
+    * @return [[scala.concurrent.Future Future]] of specified result type
+    */
+  def future[T](f: ⇒ T): Future[T] = {
+    Future(f)(this.executionContext)
+  }
+
+  /**
+    * Awaits result of future, using predefined timeout
+    * @param future Future
+    * @tparam T Future result type
+    * @return Future result
+    * @throws TimeoutException if after waiting for the specified time `Future` is still not ready
+    */
+  @throws[TimeoutException]
   def await[T](future: Future[T]): T = {
     Await.result(future, timeout.duration)
   }
 
+  /**
+    * Asynchronously fetches provided URL
+    * @param url Resource URL
+    * @return Future of fetched resources
+    */
   def get(url: String): Future[LoadedResources] = {
     (gallerySaverDispatcher ? url).mapTo[LoadedResources]
   }
 
+  /**
+    * Asynchronously fetches provided resource
+    * @param resource Resource descriptor
+    * @return Future of fetched resources
+    */
   def get(resource: LoadableResource): Future[LoadedResources] = {
     (gallerySaverDispatcher ? resource).mapTo[LoadedResources]
   }
 
+  /**
+    * Wraps futures to single [[com.karasiq.gallerysaver.dispatcher.LoadedResources LoadedResources]] object
+    * @param futures Futures of fetched resources
+    * @return [[com.karasiq.gallerysaver.dispatcher.LoadedResources LoadedResources]]
+    */
   def asResourcesStream(futures: GenTraversableOnce[Future[LoadedResources]]): LoadedResources = {
     LoadedResources(futures.toStream.flatMap { future ⇒
       Try(await(future)) match {
@@ -105,25 +179,60 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
     })
   }
 
-  // For debug purposes
+  /**
+    * Synchronously fetches provided resource URL
+    * @param url Resource URL
+    * @return Fetched resources
+    */
   def getSync(url: String): LoadedResources = {
     await(get(url))
   }
 
+  /**
+    * Synchronously fetches provided resource
+    * @param resource Resource descriptor
+    * @return Fetched resources
+    */
   def getSync(resource: LoadableResource): LoadedResources = {
     await(get(resource))
   }
 
+  /**
+    * Asynchronously fetches provided URL and then fetches available sub-resources
+    * @param url Resource URL
+    * @return Future of fetched sub-resources
+    */
   def traverse(url: String): Future[LoadedResources] = {
     get(url).map(r ⇒ asResourcesStream(r.resources.map(get)))
   }
 
-  def loadByPreview(url: String, path: Seq[String] = Seq("previews", "unsorted")): Future[LoadedResources] = {
-    (gallerySaverDispatcher ? PreviewsResource(url, path)).mapTo[LoadedResources]
+  /**
+    * Provides tag for specified gallery name
+    * @param name Gallery name
+    * @return Tag or `unsorted`
+    */
+  def tagFor(name: String): String = {
+    tagUtil.first(name).getOrElse("unsorted")
   }
 
+  /**
+    * Loads generic previews page
+    * @param url Previews page URL
+    * @param path Images save path
+    * @return Future of available images
+    */
+  def loadByPreview(url: String, path: Seq[String] = Seq("previews", "unsorted")): Future[LoadedResources] = {
+    get(PreviewsResource(url, path))
+  }
+
+  /**
+    * Loads image hosting page
+    * @param url Image hosting page URL
+    * @param path Images save path
+    * @return Future of available images
+    */
   def loadImageHosting(url: String, path: Seq[String] = Seq("imagehosting", "unsorted")): Future[LoadedResources] = {
-    (gallerySaverDispatcher ? ImageHostingResource(url, path)).mapTo[LoadedResources]
+    get(ImageHostingResource(url, path))
   }
 
   /**
@@ -145,10 +254,16 @@ final class LoaderUtils(config: Config, mapDbFile: MapDbFile, executionContext: 
     new URL(parsedUrl.getProtocol, parsedUrl.getHost, fixedFile + query).toString
   }
 
+  /**
+    * File downloader history provider
+    */
   lazy val fdHistory: FileDownloaderHistory = {
     new FileDownloaderHistory(mapDbFile)
   }
 
+  /**
+    * File downloader image converter provider
+    */
   lazy val fdConverter: FileDownloaderImageConverter = {
     FileDownloaderImageConverter.fromConfig(config.getConfig("gallery-saver.image-converter"))
   }

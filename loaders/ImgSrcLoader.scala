@@ -84,8 +84,8 @@ class ImgSrcUserLoader extends HtmlUnitGalleryLoader {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(ImgSrcUser(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    ImgSrcUser(url)
   }
 
   /**
@@ -124,8 +124,8 @@ class ImgSrcGalleryLoader extends HtmlUnitGalleryLoader {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(ImgSrcGallery(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    ImgSrcGallery(url)
   }
 
   /**

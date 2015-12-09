@@ -208,8 +208,8 @@ class FlickrPhotoLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(FlickrPhoto(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    FlickrPhoto(url)
   }
 
   /**
@@ -247,8 +247,8 @@ class FlickrGalleryLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(FlickrGallery(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    FlickrGallery(url)
   }
 
   /**
@@ -286,8 +286,8 @@ class FlickRiverLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(FlickRiverGallery(url)))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    FlickRiverGallery(url)
   }
 
   /**
@@ -323,8 +323,8 @@ class FlickrSearchLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
     * @param url URL
     * @return Available resource
     */
-  override def load(url: String): Future[Iterator[LoadableResource]] = {
-    Future.successful(Iterator(new GalleryResource(this.id, url, None, FlickrParser.sessionCookie().toMap, Seq("flickr")) with InfiniteGallery))
+  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+    new GalleryResource(this.id, url, None, FlickrParser.sessionCookie().toMap, Seq("flickr")) with InfiniteGallery
   }
 
   /**
