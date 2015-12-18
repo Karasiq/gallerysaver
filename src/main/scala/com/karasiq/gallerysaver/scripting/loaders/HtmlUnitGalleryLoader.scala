@@ -78,8 +78,9 @@ trait HtmlUnitGalleryLoader extends GalleryLoader {
       cm
     }
 
-    webClient.withCookies(cookies) {
-      webClient.withGetPage(resource.url)(f.orElse[Page, Iterator[T]] { case _ ⇒ Iterator.empty })
+    val wc: WebClient = this.webClient
+    wc.withCookies(cookies) {
+      wc.withGetPage(resource.url)(f.orElse[Page, Iterator[T]] { case _ ⇒ Iterator.empty })
     }
   }
 
