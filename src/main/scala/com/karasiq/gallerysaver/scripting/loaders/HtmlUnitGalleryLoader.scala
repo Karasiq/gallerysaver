@@ -64,9 +64,9 @@ trait HtmlUnitGalleryLoader extends GalleryLoader {
 
   protected def compileCookies(resource: LoadableResource): Iterator[Cookie] = {
     Try {
-      val host = new URL(resource.url).getHost
+      val url = new URL(resource.url)
       resource.cookies.toIterator.map { case (k, v) ⇒
-        new Cookie(host, k, v, "/", 10000000, false)
+        new Cookie(s".${url.getHost}", k, v, "/", 10000000, url.getProtocol.equalsIgnoreCase("https"))
       }
     } getOrElse Iterator.empty
   }
