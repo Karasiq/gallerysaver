@@ -8,15 +8,21 @@ import scala.collection.GenTraversableOnce
 import scala.util.matching.Regex
 
 object ImageHostingExtractor {
-  private val webClient = newWebClient(js = false, redirect = false, cookieManager = {
+  def createCookieManager(): CookieManager = {
     val cm = new CookieManager
-    cm.setCookiesEnabled(false)
+    cm.addCookie(new HtmlUnitCookie("vfl.ru", "vfl_ero", "1", "/", 1000000, false))
     cm
-  })
+  }
+
+  private val webClient = newWebClient(js = false, redirect = false, cookieManager = createCookieManager())
 
   @inline
   private def extractImage(url: String, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): Iterator[AnyRef] = {
-    Iterator.fill(1)(webClient.withGetHtmlPage(url)(getImage)).flatMap(_.toIterator)
+    Iterator.fill(1) {
+      webClient.withCookies(createCookieManager()) {
+        webClient.withGetHtmlPage(url)(getImage)
+      }
+    }.flatMap(_.toIterator)
   }
 
   def unifyToUrl: PartialFunction[AnyRef, String] = {
