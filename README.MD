@@ -1,4 +1,4 @@
-# About
+# About [![Dependencies](https://app.updateimpact.com/badge/692686982173822976/gallerysaver.svg?config=compile)](https://app.updateimpact.com/latest/692686982173822976/gallerysaver)
 GallerySaver is customizable internet galleries downloader.
 
 # Use REPL
