@@ -2,6 +2,7 @@ import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlLink, HtmlPage}
 import com.karasiq.common.StringUtils
 import com.karasiq.fileutils.PathUtils
 import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
+import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableGallery, LoadableResource}
 import com.karasiq.networkutils.HtmlUnitUtils._
@@ -59,34 +60,16 @@ object YandexParser {
 }
 
 class YandexPhotoLoader extends HtmlUnitGalleryLoader {
-  /**
-    * Loader ID
-    */
   override def id: String = "yandex-photo"
 
-  /**
-    * Is loader applicable to provided URL
-    * @param url URL
-    * @return Loader can load URL
-    */
   override def canLoadUrl(url: String): Boolean = {
     url.contains("fotki.yandex.ru") && url.contains("/view/")
   }
 
-  /**
-    * Fetches resources from URL
-    * @param url URL
-    * @return Available resource
-    */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
     YandexPhoto(url)
   }
 
-  /**
-    * Fetches sub resources from URL
-    * @param resource Parent resource
-    * @return Available resources
-    */
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     withResource(resource) {
       case YandexParser.Photo(url) ⇒
@@ -96,34 +79,16 @@ class YandexPhotoLoader extends HtmlUnitGalleryLoader {
 }
 
 class YandexGalleryLoader extends HtmlUnitGalleryLoader {
-  /**
-    * Loader ID
-    */
   override def id: String = "yandex-gallery"
 
-  /**
-    * Is loader applicable to provided URL
-    * @param url URL
-    * @return Loader can load URL
-    */
   override def canLoadUrl(url: String): Boolean = {
     url.contains("fotki.yandex.ru") && !url.contains("/view/")
   }
 
-  /**
-    * Fetches resources from URL
-    * @param url URL
-    * @return Available resource
-    */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
     YandexGallery(url)
   }
 
-  /**
-    * Fetches sub resources from URL
-    * @param resource Parent resource
-    * @return Available resources
-    */
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     withResource(resource) {
       case YandexParser.Gallery(title, images) ⇒

@@ -5,6 +5,7 @@ import akka.util.Timeout
 import com.google.inject.Guice
 import com.google.inject.name.Names
 import com.karasiq.gallerysaver.app.guice.GallerySaverModule
+import com.karasiq.gallerysaver.scripting.internal.GallerySaverContext
 import com.karasiq.mapdb.MapDbFile
 import com.typesafe.config.Config
 import net.codingwell.scalaguice.InjectorExtensions._
@@ -21,9 +22,11 @@ private[test] object TestContext {
 
   implicit val timeout: Timeout = Timeout(5 minutes)
 
-  implicit val ec = injector.instance[ActorSystem].dispatcher
+  implicit val executionContext = injector.instance[ActorSystem].dispatcher
 
   val config = injector.instance[Config].getConfig("gallery-saver.test")
 
   val mapDbFile = injector.instance[MapDbFile]
+
+  implicit val context = GallerySaverContext(injector.instance[Config], mapDbFile, executionContext, loader, null, actorSystem, null)
 }

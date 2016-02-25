@@ -3,6 +3,7 @@ import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlImage, HtmlPage}
 import com.karasiq.common.StringUtils
 import com.karasiq.fileutils.PathUtils
 import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
+import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableGallery, LoadableResource}
 import com.karasiq.networkutils.HtmlUnitUtils._
@@ -81,6 +82,7 @@ class DeviantArtPhotoLoader extends HtmlUnitGalleryLoader {
 
   /**
     * Is loader applicable to provided URL
+ *
     * @param url URL
     * @return Loader can load URL
     */
@@ -90,6 +92,7 @@ class DeviantArtPhotoLoader extends HtmlUnitGalleryLoader {
 
   /**
     * Fetches resources from URL
+ *
     * @param url URL
     * @return Available resource
     */
@@ -99,6 +102,7 @@ class DeviantArtPhotoLoader extends HtmlUnitGalleryLoader {
 
   /**
     * Fetches sub resources from URL
+ *
     * @param resource Parent resource
     * @return Available resources
     */
@@ -120,6 +124,7 @@ class DeviantArtGalleryLoader extends HtmlUnitGalleryLoader {
 
   /**
     * Is loader applicable to provided URL
+ *
     * @param url URL
     * @return Loader can load URL
     */

@@ -1,23 +1,21 @@
 package com.karasiq.gallerysaver.scripting.internal
 
 import java.io.Reader
-import javax.script.ScriptEngine
 
 import scala.io.{BufferedSource, Source}
 import scala.util.control.Exception
 
 /**
   * Script execution provider
-  * @param scriptEngine Scripting engine
   */
-final class ScriptExecutor(scriptEngine: ⇒ ScriptEngine) {
+object Scripts {
   /**
     * Executes provided script
     * @param script Script text
     * @return Evaluation result
     */
-  def eval(script: String): AnyRef = {
-    scriptEngine.eval(script)
+  def eval(script: String)(implicit ctx: GallerySaverContext): AnyRef = {
+    ctx.scriptEngine.eval(script)
   }
 
   /**
@@ -25,8 +23,8 @@ final class ScriptExecutor(scriptEngine: ⇒ ScriptEngine) {
     * @param reader Reader
     * @return Evaluation result
     */
-  def evalReader(reader: Reader): AnyRef = {
-    scriptEngine.eval(reader)
+  def evalReader(reader: Reader)(implicit ctx: GallerySaverContext): AnyRef = {
+    ctx.scriptEngine.eval(reader)
   }
 
   /**
@@ -34,7 +32,7 @@ final class ScriptExecutor(scriptEngine: ⇒ ScriptEngine) {
     * @param source Source
     * @return Evaluation result
     */
-  def evalSource(source: BufferedSource): AnyRef = {
+  def evalSource(source: BufferedSource)(implicit ctx: GallerySaverContext): AnyRef = {
     evalReader(source.bufferedReader())
   }
 
@@ -43,7 +41,7 @@ final class ScriptExecutor(scriptEngine: ⇒ ScriptEngine) {
     * @param file File path
     * @return Evaluation result
     */
-  def evalFile(file: String): AnyRef = {
+  def evalFile(file: String)(implicit ctx: GallerySaverContext): AnyRef = {
     val source = Source.fromFile(file, "UTF-8")
     Exception.allCatch.andFinally(source.close()) {
       evalSource(source)

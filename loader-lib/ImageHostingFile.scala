@@ -3,20 +3,15 @@ import java.util.concurrent.TimeUnit
 import com.karasiq.gallerysaver.builtin.ImageHostingResource
 import com.karasiq.gallerysaver.builtin.utils.ImageHostingExtractor._
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
+import com.karasiq.gallerysaver.scripting.internal.LoaderUtils
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, ExecutionContext, Future}
-
+import scala.concurrent.{Await, Future}
 
 /**
   * Image hosting extraction helper object
   */
-object ImageHostingFile {
-  /**
-    * Script engine provided execution context
-    */
-  private implicit def ec: ExecutionContext = LoaderPool
-
+object ImageHostingFile extends LoaderUtils.ContextBindings {
   /**
     * User-defined image hosting extractors. Has priority over predefined ones.
     * @see [[com.karasiq.gallerysaver.builtin.utils.ImageHostingExtractor ImageHostingExtractor]]

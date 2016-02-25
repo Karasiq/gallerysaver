@@ -3,11 +3,10 @@ package com.karasiq.gallerysaver.app.guice.providers
 import javax.script.{ScriptEngine, ScriptEngineManager}
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.event.Logging
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Provider}
 import com.karasiq.gallerysaver.dispatcher.LoaderRegistry
-import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, ScriptExecutor}
+import com.karasiq.gallerysaver.scripting.internal.GallerySaverContext
 import com.karasiq.mapdb.MapDbFile
 import com.typesafe.config.Config
 
@@ -20,14 +19,7 @@ class ScalaScriptEngineProvider @Inject()(mapDbFile: MapDbFile, config: Config, 
       case scalaInterpreter: scala.tools.nsc.interpreter.IMain ⇒
         scalaInterpreter.settings.embeddedDefaults[this.type]
         scalaInterpreter.settings.usejavacp.value = true
-        scalaInterpreter.bind("Loaders", registry)
-        scalaInterpreter.bind("Dispatcher", gallerySaverDispatcher)
-        scalaInterpreter.bind("Akka", actorSystem)
-        scalaInterpreter.bind("LoaderUtils", new LoaderUtils(config, mapDbFile, executionContext, gallerySaverDispatcher))
-        scalaInterpreter.bind("LoaderPool", executionContext)
-        scalaInterpreter.bind("Scripts", new ScriptExecutor(scalaInterpreter))
-        scalaInterpreter.bind("Config", config)
-        scalaInterpreter.bind("Log", Logging(actorSystem, "ScalaScriptEngine"))
+        scalaInterpreter.bind("GallerySaverImplicitScriptingContext", "com.karasiq.gallerysaver.scripting.internal.GallerySaverContext", GallerySaverContext(config, mapDbFile, executionContext, gallerySaverDispatcher, scalaInterpreter, actorSystem, registry), List("implicit"))
         scalaInterpreter
 
       case _ ⇒

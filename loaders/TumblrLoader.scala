@@ -2,6 +2,7 @@ import com.gargoylesoftware.htmlunit.html._
 import com.karasiq.fileutils.PathUtils
 import com.karasiq.gallerysaver.builtin.utils.ImageExpander._
 import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
+import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableGallery, LoadableResource}
 import com.karasiq.networkutils.HtmlUnitUtils._
@@ -124,6 +125,7 @@ class TumblrPostLoader extends HtmlUnitGalleryLoader {
 
   /**
     * Is loader applicable to provided URL
+ *
     * @param url URL
     * @return Loader can load URL
     */
@@ -133,6 +135,7 @@ class TumblrPostLoader extends HtmlUnitGalleryLoader {
 
   /**
     * Fetches resources from URL
+ *
     * @param url URL
     * @return Available resource
     */
@@ -142,6 +145,7 @@ class TumblrPostLoader extends HtmlUnitGalleryLoader {
 
   /**
     * Fetches sub resources from URL
+ *
     * @param resource Parent resource
     * @return Available resources
     */
@@ -163,6 +167,7 @@ class TumblrArchiveLoader extends HtmlUnitGalleryLoader {
 
   /**
     * Is loader applicable to provided URL
+ *
     * @param url URL
     * @return Loader can load URL
     */
@@ -172,6 +177,7 @@ class TumblrArchiveLoader extends HtmlUnitGalleryLoader {
 
   /**
     * Fetches resources from URL
+ *
     * @param url URL
     * @return Available resource
     */

@@ -10,10 +10,8 @@ import scala.concurrent.Await
 class HostingExpanderTest extends FreeSpec {
   import TestContext._
 
-  val utils = new LoaderUtils(config, mapDbFile, ec, loader)
-
   private def test(url: String, result: String): Unit = {
-    val future = utils.traverse(url)
+    val future = LoaderUtils.traverse(url)
     assert(Await.result(future, timeout.duration).resources.exists(_.url == result))
   }
 

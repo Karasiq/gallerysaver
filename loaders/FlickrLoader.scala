@@ -3,6 +3,7 @@ import com.gargoylesoftware.htmlunit.{BrowserVersion, CookieManager, WebClient}
 import com.karasiq.common.{StringUtils, ThreadLocalFactory}
 import com.karasiq.fileutils.PathUtils
 import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
+import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.networkutils.HtmlUnitUtils._
@@ -15,10 +16,10 @@ import scala.util.Try
 import scala.util.matching.Regex
 import scala.util.matching.Regex.Groups
 
-object FlickrParser {
+object FlickrParser extends LoaderUtils.ContextBindings {
   def sessionCookie(): Option[(String, String)] = {
-    if (Config.hasPath("gallery-saver.flickr.session")) {
-      val value = Config.getString("gallery-saver.flickr.session")
+    if (config.hasPath("gallery-saver.flickr.session")) {
+      val value = config.getString("gallery-saver.flickr.session")
       Some("cookie_session" → value)
     } else {
       None
