@@ -15,7 +15,7 @@ import com.karasiq.networkutils.http.headers.HttpHeader
 import scala.language.postfixOps
 
 final class FileDownloaderHistory(historyDb: MapDbFile) {
-  private val history = Lazy.atomic {
+  private val history = Lazy {
     MapDbWrapper(historyDb).createTreeMap[String, FileDownloaderHistoryEntry]("file_downloader") { _
       .keySerializer(MapDbSerializer[String])
       .valueSerializer(MapDbSerializer[FileDownloaderHistoryEntry])

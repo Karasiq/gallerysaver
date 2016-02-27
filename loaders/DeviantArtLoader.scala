@@ -5,16 +5,23 @@ import com.karasiq.fileutils.PathUtils
 import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
 import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
-import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableGallery, LoadableResource}
+import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 import scala.concurrent.Future
 
-case class DeviantArtPhoto(url: String, hierarchy: Seq[String] = Seq("deviantart", "unsorted"), referrer: Option[String] = None,
-                       cookies: Map[String, String] = Map("agegate_state" → "1"), loader: String = "deviantart-photo") extends CacheableGallery
 
-case class DeviantArtGallery(url: String, hierarchy: Seq[String] = Seq("deviantart"), referrer: Option[String] = None,
-                         cookies: Map[String, String] = Map("agegate_state" → "1"), loader: String = "deviantart-gallery") extends LoadableGallery
+object DeviantArtResources {
+  def photo(url: String, hierarchy: Seq[String] = Seq("deviantart", "unsorted"), referrer: Option[String] = None,
+            cookies: Map[String, String] = Map("agegate_state" → "1"), loader: String = "deviantart-photo"): CachedGalleryResource = {
+    CachedGalleryResource(loader, url, referrer, cookies, hierarchy)
+  }
+
+  def gallery(url: String, hierarchy: Seq[String] = Seq("deviantart"), referrer: Option[String] = None,
+            cookies: Map[String, String] = Map("agegate_state" → "1"), loader: String = "deviantart-gallery"): GalleryResource = {
+    GalleryResource(loader, url, referrer, cookies, hierarchy)
+  }
+}
 
 object DeviantArtParser {
   object Photo {
@@ -97,7 +104,7 @@ class DeviantArtPhotoLoader extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
-    DeviantArtPhoto(url)
+    DeviantArtResources.photo(url)
   }
 
   /**
@@ -138,7 +145,7 @@ class DeviantArtGalleryLoader extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
-    DeviantArtGallery(url)
+    DeviantArtResources.gallery(url)
   }
 
   /**
@@ -149,7 +156,7 @@ class DeviantArtGalleryLoader extends HtmlUnitGalleryLoader {
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     withResource(resource) {
       case page @ Gallery(title, images) ⇒
-        images.map(DeviantArtPhoto(_, resource.hierarchy :+ PathUtils.validFileName(title), Some(page.getUrl.toString), extractCookies(resource)))
+        images.map(DeviantArtResources.photo(_, resource.hierarchy :+ PathUtils.validFileName(title), Some(page.getUrl.toString), extractCookies(resource)))
     }
   }
 }

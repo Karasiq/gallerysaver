@@ -3,14 +3,20 @@ import com.karasiq.fileutils.PathUtils
 import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
 import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
-import com.karasiq.gallerysaver.scripting.resources.{FileResource, LoadableGallery, LoadableResource}
+import com.karasiq.gallerysaver.scripting.resources.{FileResource, GalleryResource, LoadableResource}
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 import scala.concurrent.Future
 
-case class ImgSrcGallery(url: String, hierarchy: Seq[String] = Seq("imgsrc"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty, loader: String = "imgsrc-gallery") extends LoadableGallery
+object ImgSrcResources {
+  def gallery(url: String, hierarchy: Seq[String] = Seq("imgsrc"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty): GalleryResource = {
+    GalleryResource("imgsrc-gallery", url, referrer, cookies, hierarchy)
+  }
 
-case class ImgSrcUser(url: String, hierarchy: Seq[String] = Seq("imgsrc"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty, loader: String = "imgsrc-user") extends LoadableGallery
+  def user(url: String, hierarchy: Seq[String] = Seq("imgsrc"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty): GalleryResource = {
+    GalleryResource("imgsrc-user", url, referrer, cookies, hierarchy)
+  }
+}
 
 object ImgSrcParser {
   object UserGalleries {
@@ -86,7 +92,7 @@ class ImgSrcUserLoader extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
-    ImgSrcUser(url)
+    ImgSrcResources.user(url)
   }
 
   /**
@@ -97,7 +103,7 @@ class ImgSrcUserLoader extends HtmlUnitGalleryLoader {
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     withResource(resource) {
       case page @ UserGalleries(galleries @ _*) ⇒
-        galleries.iterator.map(ImgSrcGallery(_, resource.hierarchy, Some(page.getUrl.toString)))
+        galleries.iterator.map(ImgSrcResources.gallery(_, resource.hierarchy, Some(page.getUrl.toString)))
     }
   }
 }
@@ -126,7 +132,7 @@ class ImgSrcGalleryLoader extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
-    ImgSrcGallery(url)
+    ImgSrcResources.gallery(url)
   }
 
   /**

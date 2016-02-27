@@ -54,7 +54,8 @@ case class ExampleGallery(url: String, hierarchy: Seq[String] = Seq("example", "
 
 * Write code of loader:
 ```scala
-import com.karasiq.gallerysaver.scripting.loaders._
+import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
+import com.karasiq.gallerysaver.scripting.internal._
 
 class ExampleLoader extends GalleryLoader { // Or use HtmlUnitGalleryLoader for predefined HtmlUnit interfaces
   override def id: String = "example"

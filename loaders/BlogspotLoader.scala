@@ -3,12 +3,16 @@ import com.karasiq.gallerysaver.builtin.utils.ImageExpander._
 import com.karasiq.gallerysaver.builtin.utils.PagedSiteImageExtractor
 import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
-import com.karasiq.gallerysaver.scripting.resources.{FileResource, LoadableGallery, LoadableResource}
+import com.karasiq.gallerysaver.scripting.resources.{FileResource, GalleryResource, LoadableGallery, LoadableResource}
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 import scala.concurrent.Future
 
-case class BlogspotBlog(url: String, hierarchy: Seq[String] = Seq("blogspot"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty, loader: String = "blogspot-blog") extends LoadableGallery
+object BlogspotBlog {
+  def apply(url: String, hierarchy: Seq[String] = Seq("blogspot"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty): LoadableGallery = {
+    GalleryResource("blogspot-blog", url, referrer, cookies, hierarchy)
+  }
+}
 
 class BlogspotLoader extends HtmlUnitGalleryLoader with PagedSiteImageExtractor {
   override protected def imageExpander: ExpanderFunction[AnyRef] = {
@@ -25,6 +29,7 @@ class BlogspotLoader extends HtmlUnitGalleryLoader with PagedSiteImageExtractor 
 
   /**
     * Is loader applicable to provided URL
+    *
     * @param url URL
     * @return Loader can load URL
     */
@@ -34,6 +39,7 @@ class BlogspotLoader extends HtmlUnitGalleryLoader with PagedSiteImageExtractor 
 
   /**
     * Fetches resources from URL
+    *
     * @param url URL
     * @return Available resource
     */
@@ -43,6 +49,7 @@ class BlogspotLoader extends HtmlUnitGalleryLoader with PagedSiteImageExtractor 
 
   /**
     * Fetches sub resources from URL
+    *
     * @param resource Parent resource
     * @return Available resources
     */

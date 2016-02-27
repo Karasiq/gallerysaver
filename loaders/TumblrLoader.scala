@@ -4,16 +4,22 @@ import com.karasiq.gallerysaver.builtin.utils.ImageExpander._
 import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
 import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
-import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableGallery, LoadableResource}
+import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 import scala.collection.GenTraversableOnce
 import scala.concurrent.Future
 import scala.language.{implicitConversions, postfixOps}
 
-case class TumblrPost(url: String, hierarchy: Seq[String] = Seq("tumblr", "unsorted"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty, loader: String = "tumblr-post") extends CacheableGallery
+object TumblrResources {
+  def post(url: String, hierarchy: Seq[String] = Seq("tumblr", "unsorted"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty): CachedGalleryResource = {
+    CachedGalleryResource("tumblr-post", url, referrer, cookies, hierarchy)
+  }
 
-case class TumblrArchive(url: String, hierarchy: Seq[String] = Seq("tumblr"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty, loader: String = "tumblr-archive") extends LoadableGallery
+  def archive(url: String, hierarchy: Seq[String] = Seq("tumblr"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty): GalleryResource = {
+    GalleryResource("tumblr-archive", url, referrer, cookies, hierarchy)
+  }
+}
 
 object TumblrParser {
   object Images {
@@ -140,7 +146,7 @@ class TumblrPostLoader extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
-    TumblrPost(url)
+    TumblrResources.post(url)
   }
 
   /**
@@ -182,7 +188,7 @@ class TumblrArchiveLoader extends HtmlUnitGalleryLoader {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
-    TumblrArchive(url)
+    TumblrResources.archive(url)
   }
 
   /**
@@ -193,7 +199,7 @@ class TumblrArchiveLoader extends HtmlUnitGalleryLoader {
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     withResource(resource) {
       case page @ Archive(name, posts) ⇒
-        posts.map(TumblrPost(_, resource.hierarchy :+ PathUtils.validFileName(name), Some(page.getUrl.toString), extractCookies(resource)))
+        posts.map(TumblrResources.post(_, resource.hierarchy :+ PathUtils.validFileName(name), Some(page.getUrl.toString), extractCookies(resource)))
     }
   }
 }

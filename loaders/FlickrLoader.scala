@@ -158,19 +158,27 @@ object FlickrParser extends LoaderUtils.ContextBindings {
   }
 }
 
-case class FlickrPhoto(url: String, hierarchy: Seq[String] = Seq("flickr", "unsorted"), referrer: Option[String] = None,
-                       cookies: Map[String, String] = FlickrParser.sessionCookie().toMap, loader: String = "flickr-photo") extends CacheableGallery
+object FlickrResources {
+  def photo(url: String, hierarchy: Seq[String] = Seq("flickr", "unsorted"), referrer: Option[String] = None,
+            cookies: Map[String, String] = FlickrParser.sessionCookie().toMap): CachedGalleryResource = {
+    CachedGalleryResource("flickr-photo", url, referrer, cookies, hierarchy)
+  }
 
-case class FlickrGallery(url: String, hierarchy: Seq[String] = Seq("flickr"), referrer: Option[String] = None,
-                       cookies: Map[String, String] = FlickrParser.sessionCookie().toMap, loader: String = "flickr-gallery") extends LoadableGallery
+  def gallery(url: String, hierarchy: Seq[String] = Seq("flickr"), referrer: Option[String] = None,
+            cookies: Map[String, String] = FlickrParser.sessionCookie().toMap): GalleryResource = {
+    GalleryResource("flickr-gallery", url, referrer, cookies, hierarchy)
+  }
 
-case class FlickrSearch(query: String, hierarchy: Seq[String] = Seq("flickr"), referrer: Option[String] = None,
-                       cookies: Map[String, String] = FlickrParser.sessionCookie().toMap, loader: String = "flickr-search") extends InfiniteGallery {
-  override def url: String = FlickrParser.Search.urlFor(this.query)
+  def search(query: String, hierarchy: Seq[String] = Seq("flickr"), referrer: Option[String] = None,
+            cookies: Map[String, String] = FlickrParser.sessionCookie().toMap): InfiniteGalleryResource = {
+    InfiniteGalleryResource("flickr-search", FlickrParser.Search.urlFor(query), referrer, cookies, hierarchy)
+  }
+
+  def flickriver(url: String, hierarchy: Seq[String] = Seq("flickr", "flickriver", "unsorted"), referrer: Option[String] = None,
+                 cookies: Map[String, String] = FlickrParser.sessionCookie().toMap): GalleryResource = {
+    GalleryResource("flickriver", url, referrer, cookies, hierarchy)
+  }
 }
-
-case class FlickRiverGallery(url: String, hierarchy: Seq[String] = Seq("flickr", "flickriver", "unsorted"), referrer: Option[String] = None,
-                       cookies: Map[String, String] = FlickrParser.sessionCookie().toMap, loader: String = "flickriver") extends LoadableGallery
 
 trait FlickrWebClient { self: HtmlUnitGalleryLoader ⇒
   override def webClient: WebClient = FlickrParser.webClient()
@@ -210,7 +218,7 @@ class FlickrPhotoLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
-    FlickrPhoto(url)
+    FlickrResources.photo(url)
   }
 
   /**
@@ -249,7 +257,7 @@ class FlickrGalleryLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
-    FlickrGallery(url)
+    FlickrResources.gallery(url)
   }
 
   /**
@@ -260,7 +268,7 @@ class FlickrGalleryLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     withResource(resource) {
       case page @ PhotoStream(title, photos) ⇒
-        photos.map(FlickrPhoto(_, resource.hierarchy :+ PathUtils.validFileName(title), Some(page.getUrl.toString)))
+        photos.map(FlickrResources.photo(_, resource.hierarchy :+ PathUtils.validFileName(title), Some(page.getUrl.toString)))
     }
   }
 }
@@ -288,7 +296,7 @@ class FlickRiverLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
     * @return Available resource
     */
   override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
-    FlickRiverGallery(url)
+    FlickrResources.gallery(url)
   }
 
   /**
@@ -298,7 +306,7 @@ class FlickRiverLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
     */
   override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
     val images = FlickRiver(resource.url)(webClient)
-    images.map(FlickrPhoto(_, resource.hierarchy, cookies = extractCookies(resource)))
+    images.map(FlickrResources.photo(_, resource.hierarchy, cookies = extractCookies(resource)))
   }
 }
 
@@ -345,7 +353,7 @@ class FlickrSearchLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
     webClient.withCookies(cookies) {
       PaginationUtils.htmlPageIterator(resource.url, 1 to Int.MaxValue, "page")(webClient).map {
         case page @ Photos(photos @ _*) ⇒
-          photos.map(FlickrPhoto(_, resource.hierarchy :+ subDir, Some(page.getUrl.toString), extractCookies(resource)))
+          photos.map(FlickrResources.photo(_, resource.hierarchy :+ subDir, Some(page.getUrl.toString), extractCookies(resource)))
 
         case _ ⇒
           Nil
