@@ -4,7 +4,7 @@ lazy val rootSettings = Seq(
   version := "1.0.0-M2-SNAPSHOT",
   scalaVersion := "2.11.7",
   libraryDependencies ++= {
-    val akkaV = "2.4.1"
+    val akkaV = "2.4.2"
     Seq(
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
@@ -13,9 +13,11 @@ lazy val rootSettings = Seq(
       "com.github.karasiq" %% "mapdbutils" % "1.1.0",
       "org.mapdb" % "mapdb" % "2.0-beta12",
       "com.typesafe.akka" %% "akka-actor" % akkaV,
+      "com.typesafe.akka" %% "akka-http-experimental" % akkaV,
       "net.codingwell" %% "scala-guice" % "4.0.1",
       "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-      "net.sourceforge.htmlunit" % "htmlunit" % "2.19"
+      "net.sourceforge.htmlunit" % "htmlunit" % "2.19",
+      "org.jsoup" % "jsoup" % "1.8.3"
     )
   },
   mainClass in Compile := Some("com.karasiq.gallerysaver.app.Main"),
