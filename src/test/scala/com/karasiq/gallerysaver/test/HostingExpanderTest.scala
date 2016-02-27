@@ -1,5 +1,6 @@
 package com.karasiq.gallerysaver.test
 
+import akka.stream.scaladsl.Sink
 import com.karasiq.gallerysaver.scripting.internal.LoaderUtils
 import org.scalatest.FreeSpec
 
@@ -11,8 +12,8 @@ class HostingExpanderTest extends FreeSpec {
   import TestContext._
 
   private def test(url: String, result: String): Unit = {
-    val future = LoaderUtils.traverse(url)
-    assert(Await.result(future, timeout.duration).resources.exists(_.url == result))
+    val future = LoaderUtils.traverse(url).runWith(Sink.head)
+    assert(Await.result(future, timeout.duration).url == result)
   }
 
   "Image hosting extractor" - {

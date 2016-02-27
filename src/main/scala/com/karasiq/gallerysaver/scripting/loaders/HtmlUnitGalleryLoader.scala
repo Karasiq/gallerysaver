@@ -2,9 +2,12 @@ package com.karasiq.gallerysaver.scripting.loaders
 
 import java.net.URL
 
+import akka.NotUsed
+import akka.stream.scaladsl.Source
 import com.gargoylesoftware.htmlunit.util.Cookie
 import com.gargoylesoftware.htmlunit.{CookieManager, Page, WebClient}
 import com.karasiq.common.ThreadLocalFactory
+import com.karasiq.gallerysaver.scripting.internal.{GallerySaverContext, LoaderUtils}
 import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url._
@@ -14,6 +17,8 @@ import scala.util.{Failure, Success, Try}
 
 // TODO: Dispatch, JSoup, JSON wrappers
 object HtmlUnitGalleryLoader {
+  private val factory: ThreadLocalFactory[WebClient] = ThreadLocalFactory.softRef(newWebClient(js = false, cookieManager = newCookieManager()), _.close())
+
   /**
     * Creates new cookie manager
     * @param enabled Cookies enabled
@@ -24,8 +29,6 @@ object HtmlUnitGalleryLoader {
     cm.setCookiesEnabled(enabled)
     cm
   }
-
-  private val factory: ThreadLocalFactory[WebClient] = ThreadLocalFactory.softRef(newWebClient(js = false, cookieManager = newCookieManager()), _.close())
 
   /**
     * Creates web client with default settings
@@ -40,10 +43,8 @@ object HtmlUnitGalleryLoader {
   * Basic HtmlUnit loader
   */
 trait HtmlUnitGalleryLoader extends GalleryLoader {
-  protected final def extractCookies(domain: String): Map[String, String] = {
-    webClient.getCookieManager.getCookies
-      .filter(_.getDomain.toLowerCase == domain.toLowerCase)
-      .map(cookie ⇒ cookie.getName → cookie.getValue).toMap
+  protected def extractCookies(resource: LoadableResource): Map[String, String] = {
+    resource.cookies ++ extractCookiesForUrl(resource.url)
   }
 
   // Used for external resources, to avoid cookie leak
@@ -58,8 +59,27 @@ trait HtmlUnitGalleryLoader extends GalleryLoader {
     }
   }
 
-  protected def extractCookies(resource: LoadableResource): Map[String, String] = {
-    resource.cookies ++ extractCookiesForUrl(resource.url)
+  protected final def extractCookies(domain: String): Map[String, String] = {
+    webClient.getCookieManager.getCookies
+      .filter(_.getDomain.toLowerCase == domain.toLowerCase)
+      .map(cookie ⇒ cookie.getName → cookie.getValue).toMap
+  }
+
+  protected def withResource[T <: LoadableResource](resource: LoadableResource)(f: PartialFunction[Page, Source[T, akka.NotUsed]])(implicit ctx: GallerySaverContext): Source[T, akka.NotUsed] = {
+    implicit val ec = ctx.executionContext
+    val future = LoaderUtils.future {
+      val cookies = {
+        val cm = new CookieManager
+        this.compileCookies(resource).foreach(cm.addCookie)
+        cm
+      }
+
+      val wc: WebClient = this.webClient
+      wc.withCookies(cookies) {
+        wc.withGetPage(resource.url)(f.orElse[Page, Source[T, NotUsed]] { case _ ⇒ Source.empty[T] })
+      }
+    }
+    Source.fromFuture(future).flatMapConcat(identity)
   }
 
   protected def compileCookies(resource: LoadableResource): Iterator[Cookie] = {
@@ -69,19 +89,6 @@ trait HtmlUnitGalleryLoader extends GalleryLoader {
         new Cookie(s".${url.getHost}", k, v, "/", 10000000, url.getProtocol.equalsIgnoreCase("https"))
       }
     } getOrElse Iterator.empty
-  }
-
-  protected def withResource[T <: LoadableResource](resource: LoadableResource)(f: PartialFunction[Page, Iterator[T]]): Iterator[T] = {
-    val cookies = {
-      val cm = new CookieManager
-      this.compileCookies(resource).foreach(cm.addCookie)
-      cm
-    }
-
-    val wc: WebClient = this.webClient
-    wc.withCookies(cookies) {
-      wc.withGetPage(resource.url)(f.orElse[Page, Iterator[T]] { case _ ⇒ Iterator.empty })
-    }
   }
 
   def webClient: WebClient = HtmlUnitGalleryLoader.createWebClient()

@@ -1,22 +1,26 @@
 package com.karasiq.gallerysaver.app.guice.providers
 
+import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.{Inject, Provider}
 import com.karasiq.gallerysaver.builtin.{ImageHostingLoader, PreviewLoader}
 import com.karasiq.gallerysaver.dispatcher.LoaderRegistry
+import com.karasiq.gallerysaver.scripting.internal.GallerySaverContext
 import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
+import com.karasiq.mapdb.MapDbFile
+import com.typesafe.config.Config
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
-class LoaderRegistryProvider @Inject() (executionContext: ExecutionContext) extends Provider[LoaderRegistry] {
-  private val registry = {
-    new LoaderRegistryImpl()
-      .register(new PreviewLoader(executionContext))
-      .register(new ImageHostingLoader(executionContext))
-  }
+class LoaderRegistryProvider @Inject()(mapDbFile: MapDbFile, config: Config, actorSystem: ActorSystem, executionContext: ExecutionContext) extends Provider[LoaderRegistry] {
+  final implicit val context = GallerySaverContext(config, mapDbFile, executionContext, ActorRef.noSender, null, actorSystem, new LoaderRegistryImpl())
+
+  context.registry
+    .register(new PreviewLoader)
+    .register(new ImageHostingLoader)
 
   override def get(): LoaderRegistry = {
-    registry
+    context.registry
   }
 }
 

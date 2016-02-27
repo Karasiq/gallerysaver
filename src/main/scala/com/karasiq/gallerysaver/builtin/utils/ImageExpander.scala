@@ -3,6 +3,7 @@ package com.karasiq.gallerysaver.builtin.utils
 import java.net.URL
 import java.nio.file.{Files, Paths}
 
+import akka.stream.scaladsl.Source
 import com.gargoylesoftware.htmlunit.Page
 import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlImage}
 import com.karasiq.fileutils.PathUtils._
@@ -16,37 +17,14 @@ object ImageExpander {
   import scala.language.implicitConversions
 
   type FilterFunction[T <: AnyRef] = PartialFunction[AnyRef, T]
-  type ExpanderFunction[T <: AnyRef] = PartialFunction[AnyRef, GenTraversableOnce[T]]
-
-  implicit def filterFunctionAsExpanderFunction[T <: AnyRef](f: FilterFunction[T]): ExpanderFunction[T] = f.asExpanderFunction
-
-  implicit class FilterFunctionConversion[T <: AnyRef](f: FilterFunction[T]) {
-    def asExpanderFunction: ExpanderFunction[T] = {
-      f.andThen(t ⇒ Some(t))
-    }
-  }
-
-  implicit class ExpanderFunctionConversion[T <: AnyRef](f: ExpanderFunction[T]) {
-    def asFilterFunction: FilterFunction[T] = {
-      f.andThen(_.toIterable.head)
-    }
-  }
-
+  type ExpanderFunction[T <: AnyRef] = PartialFunction[AnyRef, Source[T, akka.NotUsed]]
   val defaultImageExtensions = Set("jpg", "jpeg", "bmp", "png", "gif")
 
-  def source: FilterFunction[AnyRef] = {
-    case s: String ⇒ s
-    case a: HtmlAnchor ⇒ a
-    case img: HtmlImage ⇒ img
-  }
+  implicit def filterFunctionAsExpanderFunction[T <: AnyRef](f: FilterFunction[T]): ExpanderFunction[T] = f.asExpanderFunction
 
   def previews: FilterFunction[HtmlAnchor] = {
     case ImagePreview(anchor) ⇒
       anchor
-  }
-
-  private def isValidURL(url: ⇒ String): Boolean = {
-    Try(new URL(url)).isSuccess
   }
 
   def extensionFilter(ext: Set[String] = defaultImageExtensions): FilterFunction[HtmlAnchor] = {
@@ -54,12 +32,22 @@ object ImageExpander {
       a
   }
 
+  private def isValidURL(url: ⇒ String): Boolean = {
+    Try(new URL(url)).isSuccess
+  }
+
   def sequencedFilter[T <: AnyRef](f: ExpanderFunction[T]*): ExpanderFunction[T] = {
-    f.reduce((f1, f2) ⇒ f1.andThen(_.toIterable.flatMap(e ⇒ f2.lift(e).getOrElse(Nil))))
+    f.reduce((f1, f2) ⇒ f1.andThen(_.flatMapConcat(e ⇒ f2.lift(e).getOrElse(Source.empty))))
   }
 
   def sequenced(f: ExpanderFunction[_ <: AnyRef]*): ExpanderFunction[AnyRef] = {
-    f.reduce((f1, f2) ⇒ f1.andThen(_.toIterable.flatMap(e ⇒ f2.orElse(source.asExpanderFunction).lift(e).getOrElse(Nil))))
+    f.reduce((f1, f2) ⇒ f1.andThen(_.flatMapConcat(e ⇒ f2.orElse(source.asExpanderFunction).lift(e).getOrElse(Source.empty))))
+  }
+
+  def source: FilterFunction[AnyRef] = {
+    case s: String ⇒ s
+    case a: HtmlAnchor ⇒ a
+    case img: HtmlImage ⇒ img
   }
 
   /**
@@ -79,7 +67,40 @@ object ImageExpander {
       url
   }
 
-  implicit class PageMixedContentOps(val buffer: GenTraversableOnce[AnyRef]) {
+  implicit class FilterFunctionConversion[T <: AnyRef](val f: FilterFunction[T]) extends AnyVal {
+    def asExpanderFunction: ExpanderFunction[T] = {
+      f.andThen(Source.single)
+    }
+  }
+
+  implicit class PageMixedContentSourceOps(val buffer: Source[AnyRef, akka.NotUsed]) extends AnyVal {
+    def images: Source[HtmlImage, akka.NotUsed] = buffer.collect {
+      case img: HtmlImage ⇒ img
+    }
+
+    def anchors: Source[HtmlAnchor, akka.NotUsed] = buffer.collect {
+      case a: HtmlAnchor ⇒ a
+    }
+
+    def fileNames = links.map(url ⇒ URLParser(url).file.name)
+
+    def links: Source[String, akka.NotUsed] = buffer.collect(downloadableUrl)
+
+    def filterLinksByExt(extensions: Set[String] = ImageExpander.defaultImageExtensions) = {
+      links.filter(url ⇒ extensions.contains(URLParser(url).file.extension))
+    }
+
+    def expand[T <: AnyRef](f: ExpanderFunction[T]): Source[AnyRef, akka.NotUsed] = {
+      expandFilter(f.orElse(source.asExpanderFunction))
+    }
+
+    def expandFilter[T <: AnyRef](f: ExpanderFunction[T]): Source[T, akka.NotUsed] = {
+      buffer
+        .flatMapConcat(f.orElse { case _ ⇒ Source.empty })
+    }
+  }
+
+  implicit class PageMixedContentOps(val buffer: GenTraversableOnce[AnyRef]) extends AnyVal {
     def images: GenTraversableOnce[HtmlImage] = buffer.toIterable.collect {
       case img: HtmlImage ⇒ img
     }
@@ -88,24 +109,32 @@ object ImageExpander {
       case a: HtmlAnchor ⇒ a
     }
 
-    def links: GenSeq[String] = buffer.toSeq.collect(downloadableUrl).distinct
-
     def fileNames = links.map(url ⇒ URLParser(url).file.name)
+
+    def links: GenSeq[String] = buffer.toSeq.collect(downloadableUrl).distinct
 
     def filterLinksByExt(extensions: Set[String] = ImageExpander.defaultImageExtensions) = {
       links.filter(url ⇒ extensions.contains(URLParser(url).file.extension))
     }
 
-    def expandFilter[T <: AnyRef](f: ExpanderFunction[T]): GenTraversableOnce[T] = buffer.toIterator.flatMap(f.orElse { case _ ⇒ Nil })
-    def expand[T <: AnyRef](f: ExpanderFunction[T]): GenTraversableOnce[AnyRef] = expandFilter(f.orElse(source.asExpanderFunction))
+    def expand[T <: AnyRef](f: ExpanderFunction[T]): Source[AnyRef, akka.NotUsed] = {
+      expandFilter(f.orElse(source.asExpanderFunction))
+    }
+
+    def expandFilter[T <: AnyRef](f: ExpanderFunction[T]): Source[T, akka.NotUsed] = {
+      Source.fromIterator(() ⇒ buffer.toIterator).expandFilter(f)
+    }
   }
 
-  implicit class PageImagesOps(buffer: GenTraversableOnce[HtmlImage]) extends PageMixedContentOps(buffer) {
+  implicit class PageImagesOps(val buffer: GenTraversableOnce[HtmlImage]) extends AnyVal {
     def filterImagesBySize(width: Int = 0, height: Int = 0) = buffer.toIterable.filter(img ⇒ img.getHeight > height && img.getWidth > width)
 
-    def expandedPreviews = expandFilter(ImageExpander.previews)
+    def expandedPreviews = buffer.expandFilter(ImageExpander.previews)
 
-    def expandedPreviewsOrImages = expand(ImageExpander.previews)
+    def expandedPreviewsOrImages = buffer.expand(ImageExpander.previews)
+
+    def saveAll(directory: String, nameFunc: HtmlImage ⇒ String): Unit =
+      saveAll(directory, buffer.toIterable.map(nameFunc))
 
     def saveAll(directory: String, names: GenTraversableOnce[String]): Unit = {
       Files.createDirectories(asPath(directory))
@@ -115,10 +144,7 @@ object ImageExpander {
       }
     }
 
-    def saveAll(directory: String, nameFunc: HtmlImage ⇒ String): Unit =
-      saveAll(directory, buffer.toIterable.map(nameFunc))
-
     def saveAll(directory: String): Unit =
-      saveAll(directory, fileNames)
+      saveAll(directory, buffer.fileNames)
   }
 }

@@ -10,23 +10,26 @@ import com.karasiq.mapdb.MapDbFile
 import com.typesafe.config.Config
 import net.codingwell.scalaguice.InjectorExtensions._
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
 private[test] object TestContext {
   val injector = Guice.createInjector(new GallerySaverTestModule, new GallerySaverModule)
 
-  val actorSystem = injector.instance[ActorSystem]
+  val actorSystem: ActorSystem = injector.instance[ActorSystem]
 
-  val loader = injector.instance[ActorRef](Names.named("gallerySaverDispatcher"))
+  val loader: ActorRef = injector.instance[ActorRef](Names.named("gallerySaverDispatcher"))
 
   implicit val timeout: Timeout = Timeout(5 minutes)
 
-  implicit val executionContext = injector.instance[ActorSystem].dispatcher
+  implicit val executionContext: ExecutionContext = injector.instance[ActorSystem].dispatcher
 
-  val config = injector.instance[Config].getConfig("gallery-saver.test")
+  val config: Config = injector.instance[Config].getConfig("gallery-saver.test")
 
-  val mapDbFile = injector.instance[MapDbFile]
+  val mapDbFile: MapDbFile = injector.instance[MapDbFile]
 
-  implicit val context = GallerySaverContext(injector.instance[Config], mapDbFile, executionContext, loader, null, actorSystem, null)
+  implicit val context: GallerySaverContext = GallerySaverContext(injector.instance[Config], mapDbFile, executionContext, loader, null, actorSystem, null)
+
+  implicit val materializer = context.actorMaterializer
 }

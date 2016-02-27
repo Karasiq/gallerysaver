@@ -1,17 +1,22 @@
-import java.util.concurrent.TimeUnit
-
+import akka.stream.scaladsl.Source
 import com.karasiq.gallerysaver.builtin.ImageHostingResource
 import com.karasiq.gallerysaver.builtin.utils.ImageHostingExtractor._
-import com.karasiq.gallerysaver.dispatcher.LoadedResources
 import com.karasiq.gallerysaver.scripting.internal.LoaderUtils
-
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, Future}
+import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 
 /**
   * Image hosting extraction helper object
   */
 object ImageHostingFile extends LoaderUtils.ContextBindings {
+  def unapply(v: AnyRef): Option[Source[String, akka.NotUsed]] = {
+    this.apply().lift(v)
+  }
+
+  def apply(): PartialFunction[AnyRef, Source[String, akka.NotUsed]] = {
+    case v if unifyToUrl.isDefinedAt(v) && userDefinedExtractors.orElse(predefinedExtractors).isDefinedAt(unifyToUrl(v)) ⇒
+      resources(unifyToUrl(v)).map(_.url)
+  }
+
   /**
     * User-defined image hosting extractors. Has priority over predefined ones.
     * @see [[com.karasiq.gallerysaver.builtin.utils.ImageHostingExtractor ImageHostingExtractor]]
@@ -31,25 +36,7 @@ object ImageHostingFile extends LoaderUtils.ContextBindings {
     * @param url Image hosting URL
     * @return Resources
     */
-  def resources(url: String): Future[LoadedResources] = {
-    LoaderUtils.get(ImageHostingResource(url))
-  }
-
-  /**
-    * Fetches file URLs from image hosting
-    * @param url Image hosting URL
-    * @return Image URLs
-    */
-  def files(url: String): Future[Seq[String]] = {
-    resources(url).map(_.resources.map(_.url))
-  }
-
-  def apply(): PartialFunction[AnyRef, Seq[String]] = {
-    case v if unifyToUrl.isDefinedAt(v) && userDefinedExtractors.orElse(predefinedExtractors).isDefinedAt(unifyToUrl(v)) ⇒
-      Await.result(files(unifyToUrl(v)), FiniteDuration(5, TimeUnit.MINUTES))
-  }
-
-  def unapplySeq(v: AnyRef): Option[Seq[String]] = {
-    this.apply().lift(v)
+  def resources(url: String): Source[LoadableResource, akka.NotUsed] = {
+    LoaderUtils.asSource(ImageHostingResource(url))
   }
 }

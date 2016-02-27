@@ -1,14 +1,15 @@
 package com.karasiq.gallerysaver.scripting.loaders
 
 import akka.actor.ActorRef
+import akka.stream.scaladsl.Source
 import com.karasiq.gallerysaver.scripting.resources.LoadableResource
-
-import scala.concurrent.Future
 
 /**
   * Basic gallery loader
   */
 trait GalleryLoader {
+  final type GalleryResources = Source[LoadableResource, akka.NotUsed]
+
   /**
     * Loader ID
     */
@@ -26,14 +27,14 @@ trait GalleryLoader {
     * @param url URL
     * @return Available resource
     */
-  def load(url: String): Future[Iterator[LoadableResource]]
+  def load(url: String): GalleryResources
 
   /**
     * Fetches sub resources from URL
     * @param resource Parent resource
     * @return Available resources
     */
-  def load(resource: LoadableResource): Future[Iterator[LoadableResource]]
+  def load(resource: LoadableResource): GalleryResources
 
   /**
     * Custom file downloader

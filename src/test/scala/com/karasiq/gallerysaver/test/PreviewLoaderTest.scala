@@ -1,7 +1,7 @@
 package com.karasiq.gallerysaver.test
 
-import akka.pattern.ask
-import com.karasiq.gallerysaver.dispatcher.LoadedResources
+import akka.stream.scaladsl.Sink
+import com.karasiq.gallerysaver.scripting.internal.LoaderUtils
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -12,8 +12,8 @@ class PreviewLoaderTest extends FlatSpec with Matchers {
 
   "Preview loader" should "load test URL" in {
     val url = config.getString("preview-url")
-    val future = (loader ? url).mapTo[LoadedResources].flatMap(r ⇒ loader ? r.resources.head)
-    val result = Await.result(future.mapTo[LoadedResources], timeout.duration)
-    result.resources.head.url shouldBe config.getString("preview-result")
+    val future = LoaderUtils.traverse(url).runWith(Sink.head)
+    val result = Await.result(future, timeout.duration)
+    result.url shouldBe config.getString("preview-result")
   }
 }

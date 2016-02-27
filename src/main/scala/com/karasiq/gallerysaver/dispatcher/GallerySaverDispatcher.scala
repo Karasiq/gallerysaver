@@ -9,6 +9,8 @@ import java.util.Date
 
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
+import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
 import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.mapdb.MapDbWrapper.MapDbTreeMap
@@ -27,7 +29,7 @@ object GallerySaverDispatcher {
   /**
     * Converts [[com.karasiq.gallerysaver.scripting.resources.LoadableFile LoadableFile]] to [[com.karasiq.networkutils.downloader.FileToDownload FileToDownload]]
     * @param directory Destination directory
-    * @param f File resource descriptor
+    * @param f         File resource descriptor
     * @return File downloader actor structure
     * @see [[com.karasiq.networkutils.downloader.FileDownloaderActor FileDownloaderActor]]
     */
@@ -48,15 +50,15 @@ object GallerySaverDispatcher {
 
   /**
     * Updates cached resources
-    * @param r Resources to patch
+    * @param r   Resources to patch
     * @param res Parent resource
     */
-  def patchResources(r: LoadedResources, res: LoadableResource): LoadedResources = {
+  def patchResources(r: Seq[LoadableResource], res: LoadableResource): Seq[LoadableResource] = {
     def newHierarchy(h1: Seq[String], h2: Seq[String]): Seq[String] = {
       h1 ++ h2.drop(h1.length)
     }
 
-    r.copy(r.resources.collect {
+    r.collect {
       case f: LoadableFile ⇒
         FileResource(f.loader, f.url, f.referrer, f.cookies ++ res.cookies, newHierarchy(res.hierarchy, f.hierarchy), f.fileName)
 
@@ -65,71 +67,21 @@ object GallerySaverDispatcher {
 
       case g: LoadableGallery ⇒
         GalleryResource(g.loader, g.url, g.referrer, g.cookies ++ res.cookies, newHierarchy(res.hierarchy, g.hierarchy))
-    })
+    }
   }
 }
 
 /**
   * Main resource loading dispatcher
-  * @param rootDirectory Destination directory
-  * @param mapDbFile Cache file
+  * @param rootDirectory  Destination directory
+  * @param mapDbFile      Cache file
   * @param fileDownloader File downloader actor
-  * @param loaders Loaders registry
+  * @param loaders        Loaders registry
   */
 class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDownloader: ActorRef, loaders: LoaderRegistry) extends Actor with ActorLogging {
   import context.dispatcher
 
-  private def loadCached(loader: GalleryLoader, cg: CacheableGallery): Unit = {
-    val sender = this.sender()
-
-    import MapDbSerializer.Default._
-    implicit def resourceSerializer: Serializer[LoadableResource] = javaObjectSerializer
-
-    val cache: MapDbTreeMap[String, LoadedResources] = MapDbWrapper(mapDbFile).createTreeMap(cg.loader)(_
-      .keySerializer(MapDbSerializer[String])
-      .valueSerializer(MapDbSerializer[LoadedResources])
-      .nodeSize(32)
-      .valuesOutsideNodesEnable()
-    )
-
-    Try(cache.get(cg.url)) match {
-      case Success(Some(resources)) ⇒
-        log.debug("Found in cache: {}", cg)
-        sender ! GallerySaverDispatcher.patchResources(resources, cg)
-
-      case _ ⇒
-        log.debug("Caching resource: {}", cg)
-        loader.load(cg).onComplete {
-          case Success(resources) ⇒
-            val result = LoadedResources(resources.toList) // Eager load
-            if (result.resources.isEmpty) {
-              log.warning(s"No resources found for: $cg")
-            } else {
-              cache += cg.url → result
-            }
-            sender ! result
-
-          case Failure(exc) ⇒
-            log.error(exc, "Error loading resource: {}", cg)
-            sender ! LoadedResources.empty
-        }
-    }
-  }
-
-  private def loadResource(loader: GalleryLoader, g: LoadableGallery): Unit = {
-    val sender = this.sender()
-
-    log.debug("Loading resource: {}", g)
-    loader.load(g).onComplete {
-      case Success(resources) ⇒
-        if (resources.isEmpty) log.warning(s"No resources found for: $g")
-        sender ! LoadedResources(resources.toStream)
-
-      case Failure(exc) ⇒
-        log.error(exc, "Error loading resource: {}", g)
-        sender ! LoadedResources.empty
-    }
-  }
+  final implicit val materializer = ActorMaterializer(ActorMaterializerSettings(context.system))
 
   override def receive: Receive = {
     case url: String ⇒
@@ -137,14 +89,7 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
         case Some(loader) ⇒
           val sender = this.sender()
           log.debug("Fetching URL with {}: {}", loader.id, url)
-          loader.load(url).onComplete {
-            case Success(resources) ⇒
-              sender ! LoadedResources(resources.toStream)
-
-            case Failure(exc) ⇒
-              log.error(exc, "Error loading URL: {}", url)
-              sender ! LoadedResources.empty
-          }
+          sender ! LoadedResources(loader.load(url))
 
         case None ⇒
           log.warning("Loader not found for URL: {}", url)
@@ -192,6 +137,50 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
           log.warning("Loader not found for resource: {}", g)
           sender ! LoadedResources.empty
       }
+  }
+
+  private def loadCached(loader: GalleryLoader, cg: CacheableGallery): Unit = {
+    val sender = this.sender()
+
+    import MapDbSerializer.Default._
+    implicit def resourceSerializer: Serializer[LoadableResource] = javaObjectSerializer
+
+    val cache: MapDbTreeMap[String, Seq[LoadableResource]] = MapDbWrapper(mapDbFile).createTreeMap(cg.loader)(_
+      .keySerializer(MapDbSerializer[String])
+      .valueSerializer(MapDbSerializer[Seq[LoadableResource]])
+      .nodeSize(32)
+      .valuesOutsideNodesEnable()
+    )
+
+    Try(cache.get(cg.url)) match {
+      case Success(Some(resources)) ⇒
+        log.debug("Found in cache: {}", cg)
+        sender ! LoadedResources(Source(GallerySaverDispatcher.patchResources(resources, cg).toVector))
+
+      case _ ⇒
+        log.debug("Caching resource: {}", cg)
+        loader.load(cg).runWith(Sink.seq).onComplete {
+          case Success(resources) ⇒
+            val result = LoadedResources(Source(resources))
+            if (resources.isEmpty) {
+              log.warning(s"No resources found for: $cg")
+            } else {
+              cache += cg.url → resources
+            }
+            sender ! result
+
+          case Failure(exc) ⇒
+            log.error(exc, "Error loading resource: {}", cg)
+            sender ! LoadedResources.empty
+        }
+    }
+  }
+
+  private def loadResource(loader: GalleryLoader, g: LoadableGallery): Unit = {
+    val sender = this.sender()
+
+    log.debug("Loading resource: {}", g)
+    sender ! LoadedResources(loader.load(g))
   }
 
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy(maxNrOfRetries = 3) {

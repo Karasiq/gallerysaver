@@ -54,7 +54,9 @@ case class ExampleGallery(url: String, hierarchy: Seq[String] = Seq("example", "
 
 * Write code of loader:
 ```scala
+import akka.stream.scaladsl._
 import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
+import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.gallerysaver.scripting.internal._
 
 class ExampleLoader extends GalleryLoader { // Or use HtmlUnitGalleryLoader for predefined HtmlUnit interfaces
@@ -64,14 +66,14 @@ class ExampleLoader extends GalleryLoader { // Or use HtmlUnitGalleryLoader for 
     url.contains("http://example.com")
   }
   
-  override def load(url: String): Future[Iterator[LoadableResource]] = LoaderUtils.asResourcesFuture {
+  override def load(url: String): GalleryResources = Source.single {
     // Just wrap URL as resources
     ExampleGallery(url)
   }
   
-  override def load(resource: LoadableResource): Future[Iterator[LoadableResource]] = LoaderUtils.future {
+  override def load(resource: LoadableResource): GalleryResources = {
     val files: Iterator[String] = ??? // Parse file URLs
-    files.map(fileUrl => FileResource(this.id, fileUrl, Some(resource.url), Map.empty, resource.hierarchy :+ "example subdirectory")) // Wrap URLs as file resources
+    Source.fromIterator(() ⇒ files.map(fileUrl => FileResource(this.id, fileUrl, Some(resource.url), Map.empty, resource.hierarchy :+ "example subdirectory"))) // Wrap URLs as file resources
   }
 }
 ```
