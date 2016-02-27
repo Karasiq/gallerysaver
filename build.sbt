@@ -1,7 +1,7 @@
 lazy val rootSettings = Seq(
   name := "gallerysaver",
   isSnapshot := false,
-  version := "1.0.0-M3",
+  version := "1.0.0-M2",
   scalaVersion := "2.11.7",
   libraryDependencies ++= {
     val akkaV = "2.4.2"
