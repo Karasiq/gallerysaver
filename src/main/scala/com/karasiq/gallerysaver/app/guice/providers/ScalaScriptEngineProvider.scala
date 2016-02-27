@@ -20,6 +20,7 @@ class ScalaScriptEngineProvider @Inject()(mapDbFile: MapDbFile, config: Config, 
         scalaInterpreter.settings.embeddedDefaults[this.type]
         scalaInterpreter.settings.usejavacp.value = true
         scalaInterpreter.bind("GallerySaverImplicitScriptingContext", "com.karasiq.gallerysaver.scripting.internal.GallerySaverContext", GallerySaverContext(config, mapDbFile, executionContext, gallerySaverDispatcher, scalaInterpreter, actorSystem, registry), List("implicit"))
+        scalaInterpreter.eval("import com.karasiq.gallerysaver.scripting.internal.{Loaders, LoaderUtils, Scripts}")
         scalaInterpreter
 
       case _ ⇒
