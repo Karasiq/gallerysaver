@@ -164,21 +164,21 @@ object LoaderUtils {
   }
 
   /**
-    * Asynchronously fetches provided URL
-    * @param url Resource URL
-    * @return Future of fetched resources
-    */
-  def get(url: String)(implicit ctx: GallerySaverContext): Future[LoadedResources] = {
-    (ctx.gallerySaverDispatcher ? url).mapTo[LoadedResources]
-  }
-
-  /**
     * Asynchronously fetches provided URL and then fetches available sub-resources
     * @param url Resource URL
     * @return Future of fetched sub-resources
     */
   def traverse(url: String)(implicit ctx: GallerySaverContext): Source[LoadableResource, akka.NotUsed] = {
     Source.fromFuture(get(url).map(r ⇒ r.resources.mapAsync(1)(get).flatMapConcat(_.resources))).flatMapConcat(identity)
+  }
+
+  /**
+    * Asynchronously fetches provided URL
+    * @param url Resource URL
+    * @return Future of fetched resources
+    */
+  def get(url: String)(implicit ctx: GallerySaverContext): Future[LoadedResources] = {
+    (ctx.gallerySaverDispatcher ? url).mapTo[LoadedResources]
   }
 
   /**
@@ -191,7 +191,7 @@ object LoaderUtils {
   }
 
   private def tagUtil(implicit ctx: GallerySaverContext): TagUtil = {
-    TagUtil(ctx.config.getConfig("gallery-saver"))
+    TagUtil(ctx.config.getConfig("gallery-saver.tags"))
   }
 
   /**

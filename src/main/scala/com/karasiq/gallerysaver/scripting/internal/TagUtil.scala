@@ -28,8 +28,7 @@ final class TagUtil(val tags: Seq[(String, Set[String])]) extends AnyVal {
 object TagUtil {
   def apply(cfg: Config): TagUtil = {
     val tags = Try {
-      val tagConfigs = cfg.getConfigList("tags").toIndexedSeq
-      tagConfigs.map(c ⇒ c.getString("name") → c.getStringList("keywords").toSet)
+      cfg.entrySet().toIndexedSeq.map(e ⇒ e.getKey → cfg.getStringList(e.getKey).toSet)
     }
 
     new TagUtil(tags.getOrElse(Nil))
