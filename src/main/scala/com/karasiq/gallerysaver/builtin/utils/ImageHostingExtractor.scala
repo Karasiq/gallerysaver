@@ -8,21 +8,13 @@ import scala.collection.GenTraversableOnce
 import scala.util.matching.Regex
 
 object ImageHostingExtractor {
+  private val webClient = newWebClient(js = false, redirect = true, cookieManager = createCookieManager())
+
   def createCookieManager(): CookieManager = {
     val cm = new CookieManager
     cm.addCookie(new HtmlUnitCookie("vfl.ru", "vfl_ero", "1", "/", 1000000, false))
+    cm.addCookie(new HtmlUnitCookie("vfl.ru", "vfl_antid", "1", "/", 1000000, false))
     cm
-  }
-
-  private val webClient = newWebClient(js = false, redirect = false, cookieManager = createCookieManager())
-
-  @inline
-  private def extractImage(url: String, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): Iterator[AnyRef] = {
-    Iterator.fill(1) {
-      webClient.withCookies(createCookieManager()) {
-        webClient.withGetHtmlPage(url)(getImage)
-      }
-    }.flatMap(_.toIterator)
   }
 
   def unifyToUrl: PartialFunction[AnyRef, String] = {
@@ -92,7 +84,11 @@ object ImageHostingExtractor {
         _.firstByXPath[HtmlImage]("/html/body/div/img")),
 
       expandImageHosting("imageban.ru/show/",
-        _.elementOption(_.getHtmlElementById[HtmlImage]("img_obj"))),
+        _.firstByXPath[HtmlImage]("//img[@data-original]").flatMap { image ⇒
+          def attr(name: String) = Option(image.getAttribute(name)).filter(_.nonEmpty).map(url ⇒ image.fullUrl(_ ⇒ url))
+          attr("data-original")
+            .orElse(attr("src"))
+        }),
 
       expandImageHosting("ifotki.info/",
         _.firstByXPath[HtmlInput]("/html/body/center[1]/table/tbody/tr/td/input[2]").map {
@@ -134,5 +130,14 @@ object ImageHostingExtractor {
 
   def unapply(a: AnyRef): Option[Iterator[String]] = {
     predefinedExtractors.andThen(_.collect(ImageExpander.downloadableUrl)).lift(a)
+  }
+
+  @inline
+  private def extractImage(url: String, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): Iterator[AnyRef] = {
+    Iterator.fill(1) {
+      webClient.withCookies(createCookieManager()) {
+        webClient.withGetHtmlPage(url)(getImage)
+      }
+    }.flatMap(_.toIterator)
   }
 }
