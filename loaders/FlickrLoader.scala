@@ -262,7 +262,7 @@ object FlickrParser extends LoaderUtils.ContextBindings {
       for {
         id <- id
         title <- Some(title)
-        url <- originalSize(page).orElse(getFromSizesPage(page))
+        url <- originalSize(page).orElse(concurrent.blocking(getFromSizesPage(page)))
       } yield (id, title, url)
     }
 

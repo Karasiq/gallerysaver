@@ -91,12 +91,11 @@ object ImageHostingExtractor {
         }),
 
       expandImageHosting("ifotki.info/",
-        _.firstByXPath[HtmlInput]("/html/body/center[1]/table/tbody/tr/td/input[2]").map {
-          case input: HtmlInput ⇒
-            // Extracting image URL
-            input.getValueAttribute
-              .split(Regex.quote("[IMG]")).last
-              .split(Regex.quote("[/IMG]")).head
+        _.firstByXPath[HtmlInput]("/html/body/center[1]/table/tbody/tr/td/input[2]").map { input ⇒
+          // Extracting image URL
+          input.getValueAttribute
+            .split(Regex.quote("[IMG]")).last
+            .split(Regex.quote("[/IMG]")).head
         }),
 
       expandImageHosting("imagebam.com/image/",

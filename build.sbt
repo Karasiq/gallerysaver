@@ -1,22 +1,23 @@
 lazy val rootSettings = Seq(
   name := "gallerysaver",
-  isSnapshot := false,
-  version := "1.0.0-M2",
-  scalaVersion := "2.11.7",
+  version := "1.0.0-M3",
+  isSnapshot := version.value.endsWith("SNAPSHOT"),
+  scalaVersion := "2.11.8",
+  resolvers += Resolver.sonatypeRepo("snapshots"),
   libraryDependencies ++= {
-    val akkaV = "2.4.2"
+    val akkaV = "2.4.6"
     Seq(
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.github.karasiq" %% "commons" % "1.0.3",
-      "com.github.karasiq" %% "commons-akka" % "1.0.3",
+      "com.github.karasiq" %% "commons" % "1.0.4",
+      "com.github.karasiq" %% "commons-akka" % "1.0.4",
       "com.github.karasiq" %% "mapdbutils" % "1.1.0",
       "org.mapdb" % "mapdb" % "2.0-beta12",
       "com.typesafe.akka" %% "akka-actor" % akkaV,
       "com.typesafe.akka" %% "akka-http-experimental" % akkaV,
       "net.codingwell" %% "scala-guice" % "4.0.1",
       "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-      "net.sourceforge.htmlunit" % "htmlunit" % "2.19",
+      "net.sourceforge.htmlunit" % "htmlunit" % "2.22",
       "org.jsoup" % "jsoup" % "1.8.3"
     )
   },
