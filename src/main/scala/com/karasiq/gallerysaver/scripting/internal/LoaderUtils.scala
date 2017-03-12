@@ -7,7 +7,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import com.karasiq.gallerysaver.builtin.{ImageHostingResource, PreviewsResource}
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
@@ -156,20 +156,20 @@ object LoaderUtils {
 
   /**
     * Asynchronously fetches provided resource
+    * @param resource Resource descriptor
+    * @return Future of fetched resources
+    */
+  def get(resource: LoadableResource)(implicit ctx: GallerySaverContext): Future[LoadedResources] = {
+    (ctx.gallerySaverDispatcher ? resource).mapTo[LoadedResources]
+  }
+
+  /**
+    * Asynchronously fetches provided resource
     * @param url Resource URL
     * @return Fetched resources
     */
   def asSource(url: String)(implicit ctx: GallerySaverContext): Source[LoadableResource, akka.NotUsed] = {
     Source.fromFuture(get(url)).flatMapConcat(_.resources)
-  }
-
-  /**
-    * Asynchronously fetches provided URL and then fetches available sub-resources
-    * @param url Resource URL
-    * @return Future of fetched sub-resources
-    */
-  def traverse(url: String)(implicit ctx: GallerySaverContext): Source[LoadableResource, akka.NotUsed] = {
-    Source.fromFuture(get(url).map(r ⇒ r.resources.mapAsync(1)(get).flatMapConcat(_.resources))).flatMapConcat(identity)
   }
 
   /**
@@ -205,21 +205,28 @@ object LoaderUtils {
   }
 
   /**
-    * Asynchronously fetches provided resource
-    * @param resource Resource descriptor
-    * @return Fetched resources
+    * Prints all resources fetched from URL
+    * @param url URL
     */
-  def asSource(resource: LoadableResource)(implicit ctx: GallerySaverContext): Source[LoadableResource, akka.NotUsed] = {
-    Source.fromFuture(get(resource)).flatMapConcat(_.resources)
+  def printAll(url: String)(implicit ctx: GallerySaverContext): Unit = {
+    printAll(traverse(url))
   }
 
   /**
-    * Asynchronously fetches provided resource
-    * @param resource Resource descriptor
-    * @return Future of fetched resources
+    * Asynchronously fetches provided URL and then fetches available sub-resources
+    * @param url Resource URL
+    * @return Future of fetched sub-resources
     */
-  def get(resource: LoadableResource)(implicit ctx: GallerySaverContext): Future[LoadedResources] = {
-    (ctx.gallerySaverDispatcher ? resource).mapTo[LoadedResources]
+  def traverse(url: String)(implicit ctx: GallerySaverContext): Source[LoadableResource, akka.NotUsed] = {
+    Source.fromFuture(get(url).map(r ⇒ r.resources.mapAsync(1)(get).flatMapConcat(_.resources))).flatMapConcat(identity)
+  }
+
+  /**
+    * Prints all [[akka.stream.scaladsl.Source Source]] elements
+    * @param source Data source
+    */
+  def printAll(source: Source[_, _])(implicit ctx: GallerySaverContext): Unit = {
+    source.runWith(Sink.foreach(println))(ctx.actorMaterializer)
   }
 
   /**
@@ -230,6 +237,15 @@ object LoaderUtils {
     */
   def loadImageHosting(url: String, path: Seq[String] = Seq("imagehosting", "unsorted"))(implicit ctx: GallerySaverContext): Source[LoadableResource, akka.NotUsed] = {
     asSource(ImageHostingResource(url, path))
+  }
+
+  /**
+    * Asynchronously fetches provided resource
+    * @param resource Resource descriptor
+    * @return Fetched resources
+    */
+  def asSource(resource: LoadableResource)(implicit ctx: GallerySaverContext): Source[LoadableResource, akka.NotUsed] = {
+    Source.fromFuture(get(resource)).flatMapConcat(_.resources)
   }
 
   /**

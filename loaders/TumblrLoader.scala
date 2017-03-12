@@ -1,4 +1,5 @@
 import akka.stream.scaladsl.Source
+import com.gargoylesoftware.htmlunit.Page
 import com.gargoylesoftware.htmlunit.html._
 import com.karasiq.fileutils.PathUtils
 import com.karasiq.gallerysaver.builtin.utils.ImageExpander._
@@ -8,13 +9,12 @@ import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.networkutils.HtmlUnitUtils._
 
-import scala.collection.GenTraversableOnce
-import scala.concurrent.Future
 import scala.language.{implicitConversions, postfixOps}
+import scala.util.matching.Regex
 
 class TumblrPostLoader extends HtmlUnitGalleryLoader {
 
-  import TumblrParser.Images
+  import TumblrParser.PostContent
 
   /**
     * Is loader applicable to provided URL
@@ -41,8 +41,9 @@ class TumblrPostLoader extends HtmlUnitGalleryLoader {
     */
   override def load(resource: LoadableResource): GalleryResources = {
     withResource(resource) {
-      case page@Images(images) ⇒
-        images.map(FileResource(this.id, _, Some(page.getUrl.toString), extractCookies(resource), resource.hierarchy))
+      case page@PostContent(urls@_*) ⇒
+        val files = urls.map(FileResource(this.id, _, Some(page.getUrl.toString), extractCookies(resource), resource.hierarchy))
+        Source(files.toVector)
     }
   }
 
@@ -53,7 +54,6 @@ class TumblrPostLoader extends HtmlUnitGalleryLoader {
 }
 
 class TumblrArchiveLoader extends HtmlUnitGalleryLoader {
-
   import TumblrParser.Archive
 
   /**
@@ -104,14 +104,59 @@ object TumblrResources {
 
 object TumblrParser {
 
-  object Images {
-    def unapply(htmlPage: HtmlPage): Option[Source[String, akka.NotUsed]] = {
-      Some(postImages(htmlPage))
+  object Videos {
+    def unapplySeq(htmlPage: HtmlPage): Option[Seq[String]] = {
+      Some(postVideos(htmlPage).toVector)
     }
 
-    private def postImages(page: HtmlPage): Source[String, akka.NotUsed] = {
-      val photo: Iterator[HtmlImage] = page.byXPath[HtmlImage]("/html/body//img[not(contains(@src, 'avatar'))]")
-      val iframesPhoto: Iterator[HtmlImage] = page.byXPath[HtmlInlineFrame]("//div[contains(@id, 'post_')]//iframe").map(_.getEnclosedPage).flatMap {
+    private[this] def postVideos(page: HtmlPage): Iterator[String] = {
+      def extractHDVideoUrl(video: HtmlVideo): Option[String] = {
+        def fixJsonString(str: String): String = {
+          str.replaceAllLiterally("\\/", "/")
+            .replaceAllLiterally("\\\\", "\\")
+        }
+
+        val options = video.getAttribute("data-crt-options")
+        val regex = "\"hdUrl\":\"([^\"]+)\"".r
+        regex.findFirstMatchIn(options).map { m ⇒
+          val url = m.group(1)
+          val redirectUrl = LoaderUtils.fixUrl(fixJsonString(url))
+          page.getWebClient.withGetPage(redirectUrl)((p: Page) ⇒ p.getUrl.toString)
+        }
+      }
+
+      def extractPageVideos(page: HtmlPage): Iterator[String] = {
+        page.descendantsBy { case video: HtmlVideo if video.hasAttribute("data-crt-options") ⇒
+          extractHDVideoUrl(video)
+        }.flatten
+      }
+
+      val post = "/html/body//*[starts-with(@class, 'post') or starts-with(@id, 'post')][1]"
+      val iframeXPath = s"$post//div[contains(@id, 'post_')]//iframe"
+      val videoXpath = s"$post//video[@data-crt-options]"
+      val videos = page.byXPath[HtmlVideo](videoXpath).flatMap(extractHDVideoUrl)
+      val iframeVideos = page.byXPath[HtmlInlineFrame](iframeXPath).map(_.getEnclosedPage).flatMap {
+        case htmlPage: HtmlPage ⇒
+          extractPageVideos(htmlPage)
+
+        case _ ⇒
+          Iterator.empty
+      }
+      videos ++ iframeVideos
+    }
+  }
+
+  object Images {
+    def unapplySeq(htmlPage: HtmlPage): Option[Seq[String]] = {
+      Some(postImages(htmlPage).toVector)
+    }
+
+    private[this] def postImages(page: HtmlPage): Iterator[String] = {
+      val post = "/html/body//*[starts-with(@class, 'post') or starts-with(@id, 'post')][1]"
+      val imageXPath = s"$post//img[not(contains(@src, 'avatar'))]"
+      val images: Iterator[HtmlImage] = page.byXPath[HtmlImage](imageXPath)
+      val iframeXPath = s"$post//div[contains(@id, 'post_')]//iframe|$post//iframe[contains(@id, 'photoset_')]"
+      val iframeImages: Iterator[HtmlImage] = page.byXPath[HtmlInlineFrame](iframeXPath).map(_.getEnclosedPage).flatMap {
         case htmlPage: HtmlPage ⇒
           htmlPage.images
 
@@ -119,42 +164,40 @@ object TumblrParser {
           Nil
       }
 
-      (iframesPhoto ++ photo).expandFilter(postImageExpander).collect(downloadableUrl)
+      (iframeImages ++ images)
+        .collect(extractBestImage)
+        .collect(downloadableUrl)
     }
 
-    private def postImageExpander: PartialFunction[AnyRef, Source[AnyRef, akka.NotUsed]] = {
+    private[this] def extractBestImage: PartialFunction[AnyRef, AnyRef] = {
       case image: HtmlImage if image.getSrcAttribute.contains("media.tumblr.com") ⇒
-        val anchor: Future[GenTraversableOnce[AnyRef]] = LoaderUtils.future {
-          image.getParentNode match {
-            case a: HtmlAnchor if a.getHrefAttribute.contains("media.tumblr.com") ⇒
-              Some(a)
+        val anchor: Option[AnyRef] = image.getParentNode match {
+          case a: HtmlAnchor if a.getHrefAttribute.contains("media.tumblr.com") ⇒
+            Some(a)
 
-            case a: HtmlAnchor if a.getHrefAttribute.contains("/image/") ⇒
-              a.webClient.withGetHtmlPage(a.fullHref) {
-                case htmlPage: HtmlPage ⇒
-                  htmlPage.firstByXPath[HtmlImage]("//img[@id='content-image']").map(_.getAttribute("data-src"))
-              }
-
-            case _ ⇒
-              Nil
-          }
-        }
-
-        Source.fromFuture(anchor)
-          .flatMapConcat { anchor ⇒
-            if (anchor.isEmpty) {
-              Source.single(image)
-            } else {
-              Source.fromIterator(() ⇒ anchor.toIterator)
+          case a: HtmlAnchor if a.getHrefAttribute.contains("/image/") ⇒
+            a.webClient.withGetHtmlPage(a.fullHref) { htmlPage ⇒
+              htmlPage.firstByXPath[HtmlImage]("//img[@id='content-image']")
+                .map(_.getAttribute("data-src"))
             }
-          }
+
+          case _ ⇒
+            None
+        }
+        anchor.getOrElse(image)
+    }
+  }
+
+  object PostContent {
+    def unapplySeq(page: HtmlPage): Option[Seq[String]] = {
+      val content = Vector(Videos.unapplySeq(page), Images.unapplySeq(page)).flatten.flatten
+      if (content.nonEmpty) Some(content) else None
     }
   }
 
   object Archive {
-
     def unapply(page: HtmlPage): Option[(String, Iterator[String])] = {
-      for (blogName <- BlogName.unapply(page); iterator <- Some(posts(page)))
+      for (blogName <- BlogName.unapply(page); iterator = posts(page))
         yield blogName → iterator
     }
 
@@ -170,36 +213,22 @@ object TumblrParser {
 
       // Posts
       val postsByPage = pages.map {
-        case Posts(posts@_*) ⇒
+        case p@Posts(posts@_*) ⇒
+          p.cleanUp()
           posts
 
-        case _ ⇒
+        case p ⇒
+          p.cleanUp()
           Nil
       }
 
       postsByPage.takeWhile(_.nonEmpty).flatten
     }
 
-    private object BlogName {
-      def unapply(page: HtmlPage): Option[String] = {
-        tumblrUrlRegex.findFirstMatchIn(page.getUrl.toString)
-          .map(_.group(1))
-      }
-
-      def tumblrUrlRegex = "(\\w+)\\.tumblr\\.com".r
-    }
-
-    private object NextPageURL {
-      def unapply(page: HtmlPage): Option[String] = {
-        page.firstByXPath[HtmlAnchor]("//div[@id='pagination']//a[@id='next_page_link']")
-          .map(_.fullHref).filter(_ != page.getUrl.toString)
-      }
-    }
-
     object Posts {
       def unapplySeq(page: HtmlPage): Option[Seq[String]] = {
         for (anchors <- Some(postAnchors(page)) if anchors.nonEmpty)
-          yield anchors.toStream
+          yield anchors.toVector
       }
 
       private def postAnchors(page: HtmlPage): Iterator[String] = {
@@ -210,8 +239,22 @@ object TumblrParser {
       }
     }
 
-  }
+    private object BlogName {
+      def unapply(page: HtmlPage): Option[String] = {
+        tumblrUrlRegex.findFirstMatchIn(page.getUrl.toString)
+          .map(_.group(1))
+      }
 
+      def tumblrUrlRegex: Regex = "(\\w+)\\.tumblr\\.com".r
+    }
+
+    private object NextPageURL {
+      def unapply(page: HtmlPage): Option[String] = {
+        page.firstByXPath[HtmlAnchor]("//div[@id='pagination']//a[@id='next_page_link']")
+          .map(_.fullHref).filter(_ != page.getUrl.toString)
+      }
+    }
+  }
 }
 
 Loaders

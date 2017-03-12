@@ -3,6 +3,7 @@ package com.karasiq.gallerysaver.builtin.utils
 import java.net.URL
 import java.nio.file.{Files, Paths}
 
+import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.gargoylesoftware.htmlunit.Page
 import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlImage}
@@ -10,7 +11,7 @@ import com.karasiq.fileutils.PathUtils._
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url.URLParser
 
-import scala.collection.{GenSeq, GenTraversableOnce}
+import scala.collection.{GenIterable, GenSeq, GenTraversableOnce}
 import scala.util.Try
 
 object ImageExpander {
@@ -20,7 +21,9 @@ object ImageExpander {
   type ExpanderFunction[T <: AnyRef] = PartialFunction[AnyRef, Source[T, akka.NotUsed]]
   val defaultImageExtensions = Set("jpg", "jpeg", "bmp", "png", "gif")
 
-  implicit def filterFunctionAsExpanderFunction[T <: AnyRef](f: FilterFunction[T]): ExpanderFunction[T] = f.asExpanderFunction
+  implicit def filterFunctionAsExpanderFunction[T <: AnyRef](f: FilterFunction[T]): ExpanderFunction[T] = {
+    f.asExpanderFunction
+  }
 
   def previews: FilterFunction[HtmlAnchor] = {
     case ImagePreview(anchor) ⇒
@@ -82,12 +85,16 @@ object ImageExpander {
       case a: HtmlAnchor ⇒ a
     }
 
-    def fileNames = links.map(url ⇒ URLParser(url).file.name)
+    def fileNames: Source[String, NotUsed] = {
+      links.map(url ⇒ URLParser(url).file.name)
+    }
 
-    def links: Source[String, akka.NotUsed] = buffer.collect(downloadableUrl)
-
-    def filterLinksByExt(extensions: Set[String] = ImageExpander.defaultImageExtensions) = {
+    def filterLinksByExt(extensions: Set[String] = ImageExpander.defaultImageExtensions): Source[String, NotUsed] = {
       links.filter(url ⇒ extensions.contains(URLParser(url).file.extension))
+    }
+
+    def links: Source[String, akka.NotUsed] = {
+      buffer.collect(downloadableUrl)
     }
 
     def expand[T <: AnyRef](f: ExpanderFunction[T]): Source[AnyRef, akka.NotUsed] = {
@@ -109,11 +116,15 @@ object ImageExpander {
       case a: HtmlAnchor ⇒ a
     }
 
-    def fileNames = links.map(url ⇒ URLParser(url).file.name)
+    def fileNames: GenSeq[String] = {
+      links.map(url ⇒ URLParser(url).file.name)
+    }
 
-    def links: GenSeq[String] = buffer.toSeq.collect(downloadableUrl).distinct
+    def links: GenSeq[String] = {
+      buffer.toSeq.collect(downloadableUrl).distinct
+    }
 
-    def filterLinksByExt(extensions: Set[String] = ImageExpander.defaultImageExtensions) = {
+    def filterLinksByExt(extensions: Set[String] = ImageExpander.defaultImageExtensions): GenSeq[String] = {
       links.filter(url ⇒ extensions.contains(URLParser(url).file.extension))
     }
 
@@ -127,14 +138,21 @@ object ImageExpander {
   }
 
   implicit class PageImagesOps(val buffer: GenTraversableOnce[HtmlImage]) extends AnyVal {
-    def filterImagesBySize(width: Int = 0, height: Int = 0) = buffer.toIterable.filter(img ⇒ img.getHeight > height && img.getWidth > width)
+    def filterImagesBySize(width: Int = 0, height: Int = 0): GenIterable[HtmlImage] = {
+      buffer.toIterable.filter(img ⇒ img.getHeight > height && img.getWidth > width)
+    }
 
-    def expandedPreviews = buffer.expandFilter(ImageExpander.previews)
+    def expandedPreviews: Source[HtmlAnchor, NotUsed] = {
+      buffer.expandFilter(ImageExpander.previews)
+    }
 
-    def expandedPreviewsOrImages = buffer.expand(ImageExpander.previews)
+    def expandedPreviewsOrImages: Source[AnyRef, NotUsed] = {
+      buffer.expand(ImageExpander.previews)
+    }
 
-    def saveAll(directory: String, nameFunc: HtmlImage ⇒ String): Unit =
+    def saveAll(directory: String, nameFunc: HtmlImage ⇒ String): Unit = {
       saveAll(directory, buffer.toIterable.map(nameFunc))
+    }
 
     def saveAll(directory: String, names: GenTraversableOnce[String]): Unit = {
       Files.createDirectories(asPath(directory))
@@ -144,7 +162,8 @@ object ImageExpander {
       }
     }
 
-    def saveAll(directory: String): Unit =
+    def saveAll(directory: String): Unit = {
       saveAll(directory, buffer.fileNames)
+    }
   }
 }

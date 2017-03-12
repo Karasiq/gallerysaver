@@ -209,7 +209,7 @@ class FlickrSearchLoader extends HtmlUnitGalleryLoader with FlickrWebClient {
 }
 
 object FlickrParser extends LoaderUtils.ContextBindings {
-  private val wcFactory = ThreadLocalFactory.softRef[WebClient](newWebClient(browserVersion = BrowserVersion.INTERNET_EXPLORER_11), _.close())
+  private val wcFactory = ThreadLocalFactory.softRef[WebClient](newWebClient(browserVersion = BrowserVersion.INTERNET_EXPLORER), _.close())
 
   def sessionCookie(): Option[(String, String)] = {
     if (config.hasPath("gallery-saver.flickr.session")) {
