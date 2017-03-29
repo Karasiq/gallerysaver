@@ -8,7 +8,6 @@ import com.karasiq.gallerysaver.scripting.resources.{FileResource, GalleryResour
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 class ImgSrcUserLoader extends HtmlUnitGalleryLoader {
-
   import ImgSrcParser.UserGalleries
 
   /**
@@ -41,14 +40,13 @@ class ImgSrcUserLoader extends HtmlUnitGalleryLoader {
     */
   override def load(resource: LoadableResource): GalleryResources = {
     withResource(resource) {
-      case page@UserGalleries(galleries@_*) ⇒
-        Source.fromIterator(() ⇒ galleries.iterator.map(ImgSrcResources.gallery(_, resource.hierarchy, Some(page.getUrl.toString))))
+      case page @ UserGalleries(galleries @ _*) ⇒
+        Source(galleries.toVector.map(ImgSrcResources.gallery(_, resource.hierarchy, Some(page.getUrl.toString))))
     }
   }
 }
 
 class ImgSrcGalleryLoader extends HtmlUnitGalleryLoader {
-
   import ImgSrcParser.Gallery
 
   /**
@@ -57,7 +55,7 @@ class ImgSrcGalleryLoader extends HtmlUnitGalleryLoader {
     * @return Loader can load URL
     */
   override def canLoadUrl(url: String): Boolean = {
-    url.matches("""https?://imgsrc\.ru/\w+/\d+\.html""") ||
+    url.matches("""https?://imgsrc\.ru/\w+/a?\d+\.html""") ||
       url.contains("imgsrc.ru/main/preword.php?")
   }
 
@@ -102,12 +100,11 @@ object ImgSrcResources {
 }
 
 object ImgSrcParser {
-
   object UserGalleries {
     def unapplySeq(htmlPage: HtmlPage): Option[Seq[String]] = {
-      val galleryXpath = "/html/body/center/table/tbody/tr[3]/td/table/tbody/tr[position() > 2]/td[1]/a"
+      val galleryXpath = "/html/body/table/tbody/tr[3]/td/table/tbody/tr[position() > 2]/td[1]/a"
       for (galleries <- Some(htmlPage.byXPath[HtmlAnchor](galleryXpath)) if galleries.nonEmpty)
-        yield galleries.map(_.fullHref).toStream
+        yield galleries.map(_.fullHref).toVector
     }
   }
 
@@ -129,21 +126,24 @@ object ImgSrcParser {
     }
 
     private def galleryTapePage(page: HtmlPage): HtmlPage = {
-      page.firstByXPath[HtmlAnchor]("/html/body/center/table/tbody/tr[3]/td/center/table[2]/tbody/tr/td/a[starts-with(@href, '/main/pic_tape.php')]")
+      page.firstByXPath[HtmlAnchor]("/html/body/table/tbody/tr[3]/td/center/a[starts-with(@href, '/main/tape.php')]")
         .fold(page)(_.click[HtmlPage]())
     }
 
     private def loadAllTape(page: HtmlPage): Iterator[String] = {
-      val containerXpath = "/html/body/center/table/tbody/tr[3]/td/center"
-      val imgXpath = s"$containerXpath//img[@class='big']"
-      val nextPageXpath = s"$containerXpath//a[contains(., 'вперед')]"
+      val containerXpath = "/html/body/table/tbody/tr[3]/td"
+      val imgXpath = s"$containerXpath//img[contains(@class, 'big')]"
+      val nextPageXpath = s"$containerXpath/table/tbody/tr/td/a[contains(., '►')]"
 
-      PaginationUtils.htmlPageIterator(page, _.firstByXPath[HtmlAnchor](nextPageXpath))
-        .flatMap(_.byXPath[HtmlImage](imgXpath).map(_.fullSrc))
+      PaginationUtils.htmlPageIterator(page, _.firstByXPath[HtmlAnchor](nextPageXpath).flatMap(a ⇒ page.getWebClient.htmlPageOption(a.fullHref)))
+        .flatMap(_.byXPath[HtmlImage](imgXpath).flatMap { img =>
+          def getAttr(attr: String) = Option(img.getAttribute(attr)).filter(_.nonEmpty)
+          getAttr("data-src").orElse(getAttr("src")).map(url ⇒ img.fullUrl(_ ⇒ url))
+        })
     }
 
     private def pageName(page: HtmlPage): Option[String] = {
-      page.firstByXPath[HtmlTableDataCell]("/html/body/center/table/tbody/tr[1]/td[1]")
+      page.firstByXPath[HtmlTableDataCell]("/html/body/table/tbody/tr[1]/td[1]")
         .map(_.getTextContent.split("iMGSRC\\.RU").last.trim)
     }
 
