@@ -1,19 +1,31 @@
+import scala.language.{implicitConversions, postfixOps}
+import scala.util.Try
+import scala.util.matching.Regex
+
 import akka.stream.scaladsl.Source
 import com.gargoylesoftware.htmlunit.Page
 import com.gargoylesoftware.htmlunit.html._
+
 import com.karasiq.fileutils.PathUtils
-import com.karasiq.gallerysaver.builtin.utils.ImageExpander._
 import com.karasiq.gallerysaver.builtin.utils.PaginationUtils
-import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
+import com.karasiq.gallerysaver.builtin.utils.ImageExpander._
+import com.karasiq.gallerysaver.scripting.internal.{Loaders, LoaderUtils}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.networkutils.HtmlUnitUtils._
 
-import scala.language.{implicitConversions, postfixOps}
-import scala.util.matching.Regex
+trait TumblrLoader extends HtmlUnitGalleryLoader {
+  override protected def compileCookies(resource: LoadableResource) = {
+    val superCookies = super.compileCookies(resource)
+    if (resource.url.contains("tumblr.com")) {
+      superCookies ++ super.compileCookies(resource.url, TumblrParser.cookies().iterator)
+    } else {
+      superCookies
+    }
+  }
+}
 
-class TumblrPostLoader extends HtmlUnitGalleryLoader {
-
+class TumblrPostLoader extends TumblrLoader {
   import TumblrParser.PostContent
 
   /**
@@ -41,9 +53,9 @@ class TumblrPostLoader extends HtmlUnitGalleryLoader {
     */
   override def load(resource: LoadableResource): GalleryResources = {
     withResource(resource) {
-      case page@PostContent(urls@_*) ⇒
+      case page @ PostContent(urls @ _*) ⇒
         val files = urls.map(FileResource(this.id, _, Some(page.getUrl.toString), extractCookies(resource), resource.hierarchy))
-        Source(files.toVector)
+        Source(files.toList)
     }
   }
 
@@ -53,7 +65,7 @@ class TumblrPostLoader extends HtmlUnitGalleryLoader {
   override def id: String = "tumblr-post"
 }
 
-class TumblrArchiveLoader extends HtmlUnitGalleryLoader {
+class TumblrArchiveLoader extends TumblrLoader {
   import TumblrParser.Archive
 
   /**
@@ -86,8 +98,10 @@ class TumblrArchiveLoader extends HtmlUnitGalleryLoader {
     */
   override def load(resource: LoadableResource): GalleryResources = {
     withResource(resource) {
-      case page@Archive(name, posts) ⇒
-        Source.fromIterator(() ⇒ posts.map(TumblrResources.post(_, resource.hierarchy :+ PathUtils.validFileName(name), Some(page.getUrl.toString), extractCookies(resource))))
+      case page @ Archive(name, posts) ⇒
+        val cookies = extractCookies(resource)
+        Source.fromIterator(() ⇒ posts.map(TumblrResources.post(_, resource.hierarchy :+ PathUtils.validFileName(name),
+          Some(page.getUrl.toString), cookies)))
     }
   }
 }
@@ -103,13 +117,22 @@ object TumblrResources {
 }
 
 object TumblrParser {
+  def cookies(): Map[String, String] = {
+    import scala.collection.JavaConverters._
+    Try {
+      val cookies = LoaderUtils.config.getConfig("gallery-saver.tumblr.cookies").entrySet().asScala.map { entry ⇒
+        (entry.getKey, entry.getValue.unwrapped().asInstanceOf[String])
+      }
+      cookies.toMap
+    } getOrElse Map.empty
+  }
 
   object Videos {
     def unapplySeq(htmlPage: HtmlPage): Option[Seq[String]] = {
-      Some(postVideos(htmlPage).toVector)
+      Some(postVideos(htmlPage))
     }
 
-    private[this] def postVideos(page: HtmlPage): Iterator[String] = {
+    private[this] def postVideos(page: HtmlPage): Seq[String] = {
       def extractHDVideoUrl(video: HtmlVideo): Option[String] = {
         def fixJsonString(str: String): String = {
           str.replaceAllLiterally("\\/", "/")
@@ -135,36 +158,41 @@ object TumblrParser {
       val iframeXPath = s"$post//div[contains(@id, 'post_')]//iframe"
       val videoXpath = s"$post//video[@data-crt-options]"
       val videos = page.byXPath[HtmlVideo](videoXpath).flatMap(extractHDVideoUrl)
+
       val iframeVideos = page.byXPath[HtmlInlineFrame](iframeXPath).map(_.getEnclosedPage).flatMap {
         case htmlPage: HtmlPage ⇒
-          extractPageVideos(htmlPage)
+          val videos = extractPageVideos(htmlPage).toList
+          htmlPage.cleanUp()
+          videos
 
         case _ ⇒
-          Iterator.empty
+          Nil
       }
-      videos ++ iframeVideos
+      videos.toList ++ iframeVideos
     }
   }
 
   object Images {
     def unapplySeq(htmlPage: HtmlPage): Option[Seq[String]] = {
-      Some(postImages(htmlPage).toVector)
+      Some(postImages(htmlPage))
     }
 
-    private[this] def postImages(page: HtmlPage): Iterator[String] = {
-      val post = "/html/body//*[starts-with(@class, 'post') or starts-with(@id, 'post')][1]"
+    private[this] def postImages(page: HtmlPage): Seq[String] = {
+      val post = "/html/body//*[starts-with(@class, 'post') or starts-with(@id, 'post') or @id = 'Main'][1]"
       val imageXPath = s"$post//img[not(contains(@src, 'avatar'))]"
       val images: Iterator[HtmlImage] = page.byXPath[HtmlImage](imageXPath)
       val iframeXPath = s"$post//div[contains(@id, 'post_')]//iframe|$post//iframe[contains(@id, 'photoset_')]"
-      val iframeImages: Iterator[HtmlImage] = page.byXPath[HtmlInlineFrame](iframeXPath).map(_.getEnclosedPage).flatMap {
+      val iframeImages = page.byXPath[HtmlInlineFrame](iframeXPath).map(_.getEnclosedPage).flatMap {
         case htmlPage: HtmlPage ⇒
-          htmlPage.images
+          val images = htmlPage.images.toList
+          htmlPage.cleanUp()
+          images
 
         case _ ⇒
           Nil
       }
 
-      (iframeImages ++ images)
+      (iframeImages ++ images).toList
         .collect(extractBestImage)
         .collect(downloadableUrl)
     }
@@ -204,7 +232,7 @@ object TumblrParser {
     private def posts(page: HtmlPage): Iterator[String] = {
       // Pages
       val pages: Iterator[HtmlPage] = PaginationUtils.htmlPageIterator(page, _ match {
-        case page@NextPageURL(url) ⇒
+        case page @ NextPageURL(url) ⇒
           page.getWebClient.htmlPageOption(url)
 
         case _ ⇒
@@ -213,7 +241,7 @@ object TumblrParser {
 
       // Posts
       val postsByPage = pages.map {
-        case p@Posts(posts@_*) ⇒
+        case p @ Posts(posts @ _*) ⇒
           p.cleanUp()
           posts
 
@@ -228,7 +256,7 @@ object TumblrParser {
     object Posts {
       def unapplySeq(page: HtmlPage): Option[Seq[String]] = {
         for (anchors <- Some(postAnchors(page)) if anchors.nonEmpty)
-          yield anchors.toVector
+          yield anchors.toList
       }
 
       private def postAnchors(page: HtmlPage): Iterator[String] = {

@@ -2,18 +2,20 @@ package com.karasiq.gallerysaver.scripting.loaders
 
 import java.net.URL
 
+import scala.collection.JavaConversions._
+import scala.concurrent.ExecutionContext
+import scala.util.{Failure, Success, Try}
+
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import com.gargoylesoftware.htmlunit.util.Cookie
 import com.gargoylesoftware.htmlunit.{CookieManager, Page, WebClient}
+import com.gargoylesoftware.htmlunit.util.Cookie
+
 import com.karasiq.common.ThreadLocalFactory
 import com.karasiq.gallerysaver.scripting.internal.{GallerySaverContext, LoaderUtils}
 import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url._
-
-import scala.collection.JavaConversions._
-import scala.util.{Failure, Success, Try}
 
 // TODO: Dispatch, JSoup, JSON wrappers
 object HtmlUnitGalleryLoader {
@@ -65,15 +67,13 @@ trait HtmlUnitGalleryLoader extends GalleryLoader {
       .map(cookie ⇒ cookie.getName → cookie.getValue).toMap
   }
 
-  protected def withResource[T <: LoadableResource](resource: LoadableResource)(f: PartialFunction[Page, Source[T, akka.NotUsed]])(implicit ctx: GallerySaverContext): Source[T, akka.NotUsed] = {
-    implicit val ec = ctx.executionContext
-    val future = LoaderUtils.future {
-      val cookies = {
-        val cm = new CookieManager
-        this.compileCookies(resource).foreach(cm.addCookie)
-        cm
-      }
+  protected def withResource[T <: LoadableResource](resource: LoadableResource, staticCookies: Map[String, String] = Map.empty)
+                                                   (f: PartialFunction[Page, Source[T, akka.NotUsed]])
+                                                   (implicit ctx: GallerySaverContext): Source[T, akka.NotUsed] = {
 
+    implicit val ec: ExecutionContext = ctx.executionContext
+    val future = LoaderUtils.future {
+      val cookies = createCookieManager(resource, staticCookies)
       concurrent.blocking {
         val wc: WebClient = this.webClient
         wc.withCookies(cookies)(wc.withGetPage(resource.url)(f.orElse[Page, Source[T, NotUsed]] { case _ ⇒ Source.empty[T] }))
@@ -82,13 +82,26 @@ trait HtmlUnitGalleryLoader extends GalleryLoader {
     Source.fromFuture(future).flatMapConcat(identity)
   }
 
-  protected def compileCookies(resource: LoadableResource): Iterator[Cookie] = {
+  protected def compileCookies(urlString: String, cookies: Iterator[(String, String)]): Iterator[Cookie] = {
     Try {
-      val url = new URL(resource.url)
-      resource.cookies.toIterator.map { case (k, v) ⇒
-        new Cookie(s".${url.getHost}", k, v, "/", 10000000, url.getProtocol.equalsIgnoreCase("https"))
+      val url = new URL(urlString)
+      val isSecure = url.getProtocol.equalsIgnoreCase("https")
+      val urlHost = url.getHost
+      cookies.map { case (name, value) ⇒
+        new Cookie(s".$urlHost", name, value, "/", 10000000, isSecure)
       }
     } getOrElse Iterator.empty
+  }
+
+  protected def compileCookies(resource: LoadableResource): Iterator[Cookie] = {
+    compileCookies(resource.url, resource.cookies.iterator)
+  }
+
+  protected def createCookieManager(resource: LoadableResource, staticCookies: Map[String, String] = Map.empty): CookieManager = {
+    val cm = new CookieManager
+    this.compileCookies(resource).foreach(cm.addCookie)
+    this.compileCookies(resource.url, staticCookies.iterator).foreach(cm.addCookie)
+    cm
   }
 
   def webClient: WebClient = HtmlUnitGalleryLoader.createWebClient()
