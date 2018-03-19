@@ -3,22 +3,23 @@ package com.karasiq.gallerysaver.scripting.internal
 import java.net.{URL, URLEncoder}
 import java.util.concurrent.TimeUnit
 
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.language.postfixOps
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
+import com.typesafe.config.Config
+
 import com.karasiq.gallerysaver.builtin.{ImageHostingResource, PreviewsResource}
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
 import com.karasiq.gallerysaver.imageconverter.FileDownloaderImageConverter
 import com.karasiq.gallerysaver.mapdb.FileDownloaderHistory
 import com.karasiq.gallerysaver.scripting.resources.{InfiniteGallery, LoadableFile, LoadableResource}
-import com.typesafe.config.Config
-
-import scala.concurrent._
-import scala.concurrent.duration._
-import scala.language.postfixOps
 
 /**
   * Loader scripting helper
@@ -32,8 +33,8 @@ object LoaderUtils {
     ctx.actorSystem
   }
 
-  implicit def actorMaterializer(implicit ctx: GallerySaverContext): ActorMaterializer = {
-    ctx.actorMaterializer
+  implicit def materializer(implicit ctx: GallerySaverContext): Materializer = {
+    ctx.materializer
   }
 
   def log(implicit ctx: GallerySaverContext): LoggingAdapter = {
@@ -226,7 +227,7 @@ object LoaderUtils {
     * @param source Data source
     */
   def printAll(source: Source[_, _])(implicit ctx: GallerySaverContext): Unit = {
-    source.runWith(Sink.foreach(println))(ctx.actorMaterializer)
+    source.runWith(Sink.foreach(println))(ctx.materializer)
   }
 
   /**

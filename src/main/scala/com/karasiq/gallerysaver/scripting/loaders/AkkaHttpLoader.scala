@@ -3,7 +3,7 @@ package com.karasiq.gallerysaver.scripting.loaders
 import akka.http.scaladsl._
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.headers.{Cookie, Referer}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 
 import com.karasiq.gallerysaver.scripting.internal.GallerySaverContext
@@ -11,7 +11,7 @@ import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 
 class AkkaHttpLoader(implicit ctx: GallerySaverContext) {
   protected final val http = Http(ctx.actorSystem)
-  private implicit val actorMaterializer: ActorMaterializer = ctx.actorMaterializer
+  private[this] implicit val materializer: Materializer = ctx.materializer
 
   protected def withHttpResource[T <: LoadableResource](resource: LoadableResource): Source[HttpResponse, akka.NotUsed] = {
     val requestHeaders = List(
@@ -19,6 +19,7 @@ class AkkaHttpLoader(implicit ctx: GallerySaverContext) {
       resource.referrer.map(Referer(_))
     ).flatten
 
-    Source.fromFuture(http.singleRequest(HttpRequest(uri = resource.url, headers = requestHeaders)))
+    val request = HttpRequest(uri = resource.url, headers = requestHeaders)
+    Source.fromFuture(http.singleRequest(request))
   }
 }

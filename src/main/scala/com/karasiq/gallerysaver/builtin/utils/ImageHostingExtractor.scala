@@ -1,11 +1,12 @@
 package com.karasiq.gallerysaver.builtin.utils
 
-import com.gargoylesoftware.htmlunit.CookieManager
-import com.gargoylesoftware.htmlunit.html._
-import com.karasiq.networkutils.HtmlUnitUtils._
-
 import scala.collection.GenTraversableOnce
 import scala.util.matching.Regex
+
+import com.gargoylesoftware.htmlunit.CookieManager
+import com.gargoylesoftware.htmlunit.html._
+
+import com.karasiq.networkutils.HtmlUnitUtils._
 
 object ImageHostingExtractor {
   private val webClient = newWebClient(js = false, redirect = true, cookieManager = createCookieManager())
@@ -123,7 +124,7 @@ object ImageHostingExtractor {
         _.firstByXPath[HtmlImage]("/html/body/div/div[2]/div[1]/p[1]/a/img")),
 
       expandImageHostingR("(radikal\\.ru|f-picture\\.net)/(F|fp)/",
-        _.firstByXPath[HtmlImage]("//img[@itemprop='contentUrl']"))
+        _.firstByXPath[HtmlImage]("//div[@class='mainBlock']/div/img"))
     ).reduce(_ orElse _)
   }
 
