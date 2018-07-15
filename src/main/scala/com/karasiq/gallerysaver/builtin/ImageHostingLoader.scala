@@ -1,8 +1,11 @@
 package com.karasiq.gallerysaver.builtin
 
 import akka.stream.scaladsl.Source
-import com.karasiq.gallerysaver.builtin.utils.ImageHostingExtractor
-import com.karasiq.gallerysaver.scripting.internal.GallerySaverContext
+
+import com.karasiq.fileutils.PathUtils
+import com.karasiq.gallerysaver.builtin.utils.{ImageExpander, ImageHostingExtractor}
+import com.karasiq.gallerysaver.builtin.utils.ImageHostingExtractor.CapturedPage
+import com.karasiq.gallerysaver.scripting.internal.{GallerySaverContext, LoaderUtils}
 import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
 import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableResource}
 
@@ -36,13 +39,19 @@ class ImageHostingLoader(implicit ctx: GallerySaverContext) extends GalleryLoade
     * @return Available resources
     */
   override def load(resource: LoadableResource): GalleryResources = {
-    resource.url match {
-      case ImageHostingExtractor(data) ⇒
-        Source.fromIterator(() ⇒ data.map(FileResource(this.id, _, Some(resource.url), resource.cookies)))
+    val future = LoaderUtils.future {
+      resource.url match {
+        case ImageHostingExtractor(CapturedPage(url, title, cookies, files)) ⇒
+          Source.fromIterator(() ⇒ {
+            val linksIterator = files.iterator.map(ImageExpander.downloadableUrl)
+            linksIterator.map(FileResource(this.id, _, Some(url), resource.cookies ++ cookies, resource.hierarchy :+ PathUtils.validFileName(s"$title [${url.hashCode.toHexString}]")))
+          })
 
-      case _ ⇒
-        Source.empty
+        case _ ⇒
+          Source.empty
+      }
     }
+    Source.fromFuture(future).flatMapConcat(identity)
   }
 
   /**

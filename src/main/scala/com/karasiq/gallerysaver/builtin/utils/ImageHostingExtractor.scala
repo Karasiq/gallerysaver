@@ -9,7 +9,8 @@ import com.gargoylesoftware.htmlunit.html._
 import com.karasiq.networkutils.HtmlUnitUtils._
 
 object ImageHostingExtractor {
-  private val webClient = newWebClient(js = false, redirect = true, cookieManager = createCookieManager())
+  final case class CapturedPage(url: String, title: String, cookies: Map[String, String], files: Seq[AnyRef])
+  private[this] val webClient = newWebClient(js = false, redirect = true, cookieManager = createCookieManager())
 
   def createCookieManager(): CookieManager = {
     val cm = new CookieManager
@@ -32,12 +33,12 @@ object ImageHostingExtractor {
   /**
     * Expand image hosting by custom predicate
     * @param predicate Predicate function
-    * @param getImage Image extractor function
+    * @param getFiles Image extractor function
     * @return Hosting expander function
     */
-  def expandImageHostingC(predicate: String ⇒ Boolean, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): PartialFunction[AnyRef, Iterator[AnyRef]] = {
+  def expandImageHostingC(predicate: String ⇒ Boolean, getFiles: HtmlPage ⇒ GenTraversableOnce[AnyRef]): PartialFunction[AnyRef, CapturedPage] = {
     case v if unifyToUrl.isDefinedAt(v) && predicate(unifyToUrl(v)) ⇒
-      extractImage(unifyToUrl(v), getImage)
+      extractImage(unifyToUrl(v), getFiles)
   }
 
   /**
@@ -46,7 +47,7 @@ object ImageHostingExtractor {
     * @param getImage Image extractor function
     * @return Hosting expander function
     */
-  def expandImageHostingR(regex: String, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): PartialFunction[AnyRef, Iterator[AnyRef]] = {
+  def expandImageHostingR(regex: String, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): PartialFunction[AnyRef, CapturedPage] = {
     val urlRegex = "^https?://(www\\.)?" + regex + ".*$"
     expandImageHostingC(_.matches(urlRegex), getImage)
   }
@@ -57,11 +58,11 @@ object ImageHostingExtractor {
     * @param getImage Image extractor function
     * @return Hosting expander function
     */
-  def expandImageHosting(urlStart: String, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): PartialFunction[AnyRef, Iterator[AnyRef]] = {
+  def expandImageHosting(urlStart: String, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): PartialFunction[AnyRef, CapturedPage] = {
     expandImageHostingR(Regex.quote(urlStart), getImage)
   }
 
-  def predefinedExtractors: PartialFunction[AnyRef, Iterator[AnyRef]] = {
+  def predefinedExtractors: PartialFunction[AnyRef, CapturedPage] = {
     Vector(
       expandImageHosting("postimg.org/image/",
         _.elementOption(_.getFirstByXPath[HtmlImage]("/html/body/center/img"))),
@@ -124,20 +125,33 @@ object ImageHostingExtractor {
         _.firstByXPath[HtmlImage]("/html/body/div/div[2]/div[1]/p[1]/a/img")),
 
       expandImageHostingR("(radikal\\.ru|f-picture\\.net)/(F|fp)/",
-        _.firstByXPath[HtmlImage]("//div[@class='mainBlock']/div/img"))
+        _.firstByXPath[HtmlImage]("//div[@class='mainBlock']/div/img")),
+
+      expandImageHosting("imgur.com", { page ⇒
+        // Extract from JSON
+        val regex = """"hash":"(\w+)",(?!"album_cover")[^}]+?"ext":"(\.\w+)"""".r
+        val text = page.getWebResponse.getContentAsString
+        regex.findAllMatchIn(text)
+          .map(rm ⇒ "https://i.imgur.com/" + rm.group(1) + rm.group(2))
+          .toVector
+          .distinct
+      })
     ).reduce(_ orElse _)
   }
 
-  def unapply(a: AnyRef): Option[Iterator[String]] = {
-    predefinedExtractors.andThen(_.collect(ImageExpander.downloadableUrl)).lift(a)
+  def unapply(a: AnyRef): Option[CapturedPage] = {
+    predefinedExtractors.lift(a)
   }
 
   @inline
-  private def extractImage(url: String, getImage: HtmlPage ⇒ GenTraversableOnce[AnyRef]): Iterator[AnyRef] = {
-    Iterator.fill(1) {
-      webClient.withCookies(createCookieManager()) {
-        webClient.withGetHtmlPage(url)(getImage)
+  private[this] def extractImage(url: String, getFiles: HtmlPage ⇒ GenTraversableOnce[AnyRef]): CapturedPage = {
+    webClient.withCookies(createCookieManager()) {
+      webClient.withGetHtmlPage(url) { page ⇒
+        val title = page.getTitleText
+        val files = getFiles(page)
+        val cookies = webClient.cookies.map(c ⇒ (c.getName, c.getValue)).toMap
+        CapturedPage(page.getUrl.toString, title, cookies, files.toStream)
       }
-    }.flatMap(_.toIterator)
+    }
   }
 }
