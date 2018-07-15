@@ -44,7 +44,14 @@ class ImageHostingLoader(implicit ctx: GallerySaverContext) extends GalleryLoade
         case ImageHostingExtractor(CapturedPage(url, title, cookies, files)) ⇒
           Source.fromIterator(() ⇒ {
             val linksIterator = files.iterator.map(ImageExpander.downloadableUrl)
-            linksIterator.map(FileResource(this.id, _, Some(url), resource.cookies ++ cookies, resource.hierarchy :+ PathUtils.validFileName(s"$title [${url.hashCode.toHexString}]")))
+
+            val hierarchy = if (resource.hierarchy.lastOption.contains("unsorted"))
+              resource.hierarchy.dropRight(1) :+ LoaderUtils.tagFor(title)
+            else
+              resource.hierarchy
+
+            val folderName = PathUtils.validFileName(s"$title [${url.hashCode.toHexString}]")
+            linksIterator.map(FileResource(this.id, _, Some(url), resource.cookies ++ cookies, hierarchy :+ folderName))
           })
 
         case _ ⇒
