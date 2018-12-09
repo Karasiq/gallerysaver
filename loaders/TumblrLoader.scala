@@ -155,9 +155,13 @@ object TumblrParser {
       }
 
       val post = "/html/body//*[starts-with(@class, 'post') or starts-with(@id, 'post')][1]"
-      val iframeXPath = s"$post//div[contains(@id, 'post_')]//iframe"
+      val iframeXPath = s"$post//div[contains(@class, 'post-content')]//iframe[contains(@class, 'tumblr_video_iframe')]"
       val videoXpath = s"$post//video[@data-crt-options]"
-      val videos = page.byXPath[HtmlVideo](videoXpath).flatMap(extractHDVideoUrl)
+      val videos = page.byXPath[HtmlVideo](videoXpath)
+        .flatMap(extractHDVideoUrl)
+
+      val plainVideos = page.byXPath[HtmlSource](s"$post//video/source")
+        .map(_.fullUrl(_.getAttribute("src")))
 
       val iframeVideos = page.byXPath[HtmlInlineFrame](iframeXPath).map(_.getEnclosedPage).flatMap {
         case htmlPage: HtmlPage ⇒
@@ -168,7 +172,7 @@ object TumblrParser {
         case _ ⇒
           Nil
       }
-      videos.toList ++ iframeVideos
+      videos.toVector ++ iframeVideos ++ plainVideos
     }
   }
 
