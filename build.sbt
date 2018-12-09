@@ -10,8 +10,8 @@ lazy val rootSettings = Seq(
     Seq(
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.github.karasiq" %% "commons" % "1.0.5",
-      "com.github.karasiq" %% "commons-akka" % "1.0.5",
+      "com.github.karasiq" %% "commons" % "1.0.11",
+      "com.github.karasiq" %% "commons-akka" % "1.0.11",
       "com.github.karasiq" %% "mapdbutils" % "1.1.1",
       "org.mapdb" % "mapdb" % "2.0-beta12",
       "com.typesafe.akka" %% "akka-actor" % akkaV,
