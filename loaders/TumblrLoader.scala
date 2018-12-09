@@ -148,9 +148,17 @@ object TumblrParser {
         }
       }
 
+      def extractVideoSource(video: HtmlVideo): Option[String] = {
+        video.subElementsOf[HtmlSource]
+          .map(_.fullUrl(_.getAttribute("src")))
+          .toSeq
+          .headOption
+      }
+
       def extractPageVideos(page: HtmlPage): Iterator[String] = {
         page.descendantsBy { case video: HtmlVideo if video.hasAttribute("data-crt-options") ⇒
           extractHDVideoUrl(video)
+            .orElse(extractVideoSource(video))
         }.flatten
       }
 
@@ -159,9 +167,6 @@ object TumblrParser {
       val videoXpath = s"$post//video[@data-crt-options]"
       val videos = page.byXPath[HtmlVideo](videoXpath)
         .flatMap(extractHDVideoUrl)
-
-      val plainVideos = page.byXPath[HtmlSource](s"$post//video/source")
-        .map(_.fullUrl(_.getAttribute("src")))
 
       val iframeVideos = page.byXPath[HtmlInlineFrame](iframeXPath).map(_.getEnclosedPage).flatMap {
         case htmlPage: HtmlPage ⇒
@@ -172,6 +177,10 @@ object TumblrParser {
         case _ ⇒
           Nil
       }
+
+      val plainVideos = page.byXPath[HtmlVideo](s"$post//video")
+        .flatMap(extractVideoSource)
+      
       videos.toVector ++ iframeVideos ++ plainVideos
     }
   }
