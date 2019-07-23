@@ -93,7 +93,7 @@ object Main extends App {
       } else {
         Try(engine.eval(line, consoleContext)) match {
           case Success(value) ⇒ if (value.ne(null)) println(value)
-          case Failure(exc) ⇒ System.err.println(exc)
+          case Failure(exc) ⇒ exc.printStackTrace()
         }
       }
     }
