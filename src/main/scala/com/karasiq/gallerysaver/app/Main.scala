@@ -54,6 +54,7 @@ object Main extends App {
 
     // Dependency injector
     val injector = Guice.createInjector(new GallerySaverMainModule, new GallerySaverModule)
+    val cl = Thread.currentThread().getContextClassLoader
 
     // Add shutdown hook
     sys.addShutdownHook {
@@ -68,6 +69,7 @@ object Main extends App {
     // Load scripts
     implicit val context = injector.instance[GallerySaverContext]
     val engine = injector.instance[ScriptEngine](Names.named("scala"))
+    Thread.currentThread().setContextClassLoader(cl) // Fix scala compiler buggy loader
 
     context.config.getStringList("gallery-saver.auto-exec-folders").foreach { folder ⇒
       Paths.get(folder) match {
@@ -132,7 +134,7 @@ object Main extends App {
                   fw.write("\n")
                   fw.close()
                 }
-                setMessage(string.take(size.getColumns - 5))
+                setMessage(string)
               }
               true
             case Failure(exc) ⇒

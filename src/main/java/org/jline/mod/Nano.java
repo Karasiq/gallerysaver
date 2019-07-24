@@ -1801,6 +1801,12 @@ public class Nano {
     }
 
     protected void setMessage(String message) {
+        if (message != null) {
+            int v = size.getColumns() - 5;
+            message = message.replaceAll("[\\r\\n\\t]", " ");
+            if (message.length() > v) message = message.substring(0, v);
+        }
+
         this.message = message;
         this.nbBindings = 25;
     }

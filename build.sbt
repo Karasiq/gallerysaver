@@ -24,10 +24,6 @@ lazy val rootSettings = Seq(
       "org.jline" % "jline" % "3.12.1"
     )
   },
-//  excludeDependencies ++= Seq(
-//    "xalan" % "xalan",
-//    "xerces" % "xercesImpl"
-//  ),
   mainClass in Compile := Some("com.karasiq.gallerysaver.app.Main"),
   fork in run := true,
   fork in test := true,

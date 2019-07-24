@@ -1,27 +1,21 @@
-import com.gargoylesoftware.htmlunit.html.{HtmlDivision, HtmlElement, HtmlPage}
-import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Scripts}
+package com.karasiq.gallerysaver.scripting.internal
+
+import com.gargoylesoftware.htmlunit.html.HtmlElement
 import com.karasiq.networkutils.url._
 
 import scala.util.Try
 import scala.util.matching.Regex
 
-object debug {
+object DebugUtils {
   val HtmlUnitUtils = com.karasiq.networkutils.HtmlUnitUtils
   import HtmlUnitUtils._
-
-  def test(): Unit  = {
-    val webClient = newWebClient()
-    webClient.getPage[HtmlPage]("https://google.com").byXPath[HtmlDivision]("//div").foreach(println)
-  }
-
-  test()
 
   lazy val webClient = newWebClient(js = false)
 
   def parseUrl(url: String) =
     URLParser(url)
 
-  def runScript(s: String) =
+  def runScript(s: String)(implicit ctx: GallerySaverContext) =
     Scripts.evalFile(s"scripts/$s.scala")
 
   def linksList(ss: Seq[String]): String = {
@@ -45,20 +39,18 @@ object debug {
     def localLinks: Seq[String] =
       links.filter(l => URLParser(l).host == URLParser(htmlPage.get.getBaseURL).host)
 
-    def elements(s: String): Seq[HtmlElement] = for {
+    def x(s: String): Seq[HtmlElement] = for {
       p <- htmlPage.toVector
       el <- p.byXPath[HtmlElement](s)
     } yield el
 
-    def regex(s: String): Seq[Regex.Match] = for {
+    def r(s: String): Seq[Regex.Match] = for {
       p <- htmlPage.toVector
       pXml = p.asXml()
       m <- s.r.findAllMatchIn(pXml)
     } yield m
 
-    def resources =
+    def resources(implicit ctx: GallerySaverContext) =
       LoaderUtils.awaitAll(LoaderUtils.traverse(url))
-
-
   }
 }
