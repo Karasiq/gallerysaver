@@ -132,13 +132,14 @@ class AncensoredClipLoader extends HtmlUnitGalleryLoader {
         val http = Http()
 
         val csrf = htmlPage.elementsByTagName[HtmlMeta]("meta").find(_.getNameAttribute == "csrf-token").fold("")(_.getContentAttribute)
+
+        val cookies = extractCookies("ancensored.com").toSeq
         val headers = Seq(
-          Cookie(extractCookies("ancensored.com").toSeq:_*),
           `X-CSRF-Token`(csrf),
           `X-Requested-With`,
           `User-Agent`(htmlPage.getWebClient.getBrowserVersion.getUserAgent),
           Accept(MediaRange(MediaTypes.`application/json`))
-        )
+        ) ++ (if (cookies.nonEmpty) Seq(Cookie(cookies: _*)) else Nil)
 
         http.singleRequest(HttpRequest(HttpMethods.POST, "http://ancensored.com/video/get-link", headers.toList, FormData("hash" -> hash).toEntity))
           .flatMap(resp => resp.entity.toStrict(10 seconds))
