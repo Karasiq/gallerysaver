@@ -5,6 +5,10 @@ import java.io.{FileWriter, PrintWriter}
 import akka.actor.Actor
 import akka.event.Logging.{Debug, Debug3, Error, Error3, Info, Info3, InitializeLogger, LogEvent, LoggerInitialized, Warning, Warning3, simpleName, stackTraceFor}
 
+object AppLogger {
+  var println = scala.Predef.println(_: Any)
+}
+
 class AppLogger extends Actor {
   val fw = new FileWriter("gs-download.log", true)
   val pw = new PrintWriter(fw)
@@ -123,6 +127,7 @@ class AppLogger extends Actor {
   }
 
   def println(s: String) = {
+    AppLogger.println(s)
     pw.println(s)
     pw.flush()
   }

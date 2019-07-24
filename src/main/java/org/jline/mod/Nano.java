@@ -1800,7 +1800,7 @@ public class Nano {
         }
     }
 
-    protected void setMessage(String message) {
+    public void setMessage(String message) {
         if (message != null) {
             int v = size.getColumns() - 5;
             message = message.replaceAll("[\\r\\n\\t]", " ");
@@ -1809,6 +1809,7 @@ public class Nano {
 
         this.message = message;
         this.nbBindings = 25;
+        display();
     }
 
     protected boolean doExecute(List<String> lines) {
