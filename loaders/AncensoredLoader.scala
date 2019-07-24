@@ -128,6 +128,7 @@ class AncensoredClipLoader extends HtmlUnitGalleryLoader {
         }
 
         import scala.concurrent.duration._
+        import com.karasiq.gallerysaver.scripting.internal.LoaderUtils._
         val http = Http()
 
         val csrf = htmlPage.elementsByTagName[HtmlMeta]("meta").find(_.getNameAttribute == "csrf-token").fold("")(_.getContentAttribute)
