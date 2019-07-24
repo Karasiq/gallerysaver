@@ -24,9 +24,9 @@ import org.jline.terminal.TerminalBuilder
 import scala.collection.JavaConversions._
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.io.Source
+import scala.io.{Source, StdIn}
 import scala.language.postfixOps
-import scala.util.control.Exception
+import scala.util.control.{Exception, NonFatal}
 import scala.util.{Failure, Success, Try}
 
 object Main extends App {
@@ -42,7 +42,7 @@ object Main extends App {
 
   private def loadScriptsDirectory(engine: ScriptEngine, dir: Path): Unit = {
     val scripts = dir.subFiles.filter(_.getFileName.toString.endsWith(".scala"))
-    loadScripts(engine, scripts.toSeq:_*)
+    loadScripts(engine, scripts.toSeq: _*)
   }
 
   private def startup(): Unit = {
@@ -94,7 +94,9 @@ object Main extends App {
     val consoleContext = new SimpleScriptContext()
     val dummyWriter = new Writer() {
       override def write(cbuf: Array[Char], off: Int, len: Int): Unit = ()
+
       override def flush(): Unit = ()
+
       override def close(): Unit = ()
     }
 
@@ -108,7 +110,9 @@ object Main extends App {
     val terminal = TerminalBuilder.builder().build()
 
     val nano = new Nano(terminal, new File(".")) {
+
       import scala.collection.JavaConverters._
+
       override protected def doExecute(lines: util.List[String]): Boolean = {
         Try {
           val fw = new FileWriter(new File("gs-history.log"), true)
@@ -119,7 +123,7 @@ object Main extends App {
 
         val links = lines.asScala.forall(line => line.startsWith("https://") || line.startsWith("http://"))
         if (links) {
-          val failure = Try(LoaderUtils.loadAllUrls(lines.asScala.toVector:_*)).failed.toOption.map(_.toString)
+          val failure = Try(LoaderUtils.loadAllUrls(lines.asScala.toVector: _*)).failed.toOption.map(_.toString)
           failure.foreach(setMessage)
           failure.isEmpty
         } else {
@@ -151,7 +155,21 @@ object Main extends App {
         }
       }
     }
-    nano.run()
+    try {
+      nano.run()
+    } catch {
+      case NonFatal(_) =>
+        Iterator.continually(StdIn.readLine()).takeWhile(_.ne(null)).foreach { line ⇒
+          if (line.startsWith("https://") || line.startsWith("http://")) {
+            Try(LoaderUtils.loadAllUrls(line)).failed.foreach(System.err.println(_))
+          } else {
+            Try(engine.eval(line, consoleContext)) match {
+              case Success(value) ⇒ if (value.ne(null)) println(value)
+              case Failure(exc) ⇒ exc.printStackTrace()
+            }
+          }
+        }
+    }
     sys.exit(0)
   }
 
