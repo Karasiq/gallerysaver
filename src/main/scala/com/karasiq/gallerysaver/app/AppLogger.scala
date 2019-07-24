@@ -122,5 +122,8 @@ class AppLogger extends Actor {
         event.message))
   }
 
-  def println(s: String) = pw.println(s)
+  def println(s: String) = {
+    pw.println(s)
+    pw.flush()
+  }
 }
