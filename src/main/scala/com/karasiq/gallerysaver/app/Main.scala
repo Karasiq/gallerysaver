@@ -156,7 +156,7 @@ object Main extends App {
       }
     }
     try {
-      AppLogger.println = v => nano.setMessage(v.toString)
+      AppLogger.println = v => nano.setMessageInstant(v.toString)
       nano.run()
     } catch {
       case NonFatal(_) =>
