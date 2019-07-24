@@ -1,23 +1,24 @@
 import java.io.{OutputStream, PrintWriter}
 
-import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
-
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.stream.scaladsl.Source
+import com.gargoylesoftware.htmlunit.BrowserVersion.BrowserVersionBuilder
 import com.gargoylesoftware.htmlunit._
 import com.gargoylesoftware.htmlunit.html._
-
 import com.karasiq.common.{StringUtils, ThreadLocalFactory}
 import com.karasiq.fileutils.PathUtils
-import com.karasiq.gallerysaver.scripting.internal.{GallerySaverContext, Loaders, LoaderUtils}
+import com.karasiq.gallerysaver.scripting.internal.{GallerySaverContext, LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources._
+import com.karasiq.networkutils.HtmlUnitUtils
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.cloudflare.{CloudFlareCookieRetriever, CloudFlareUtils}
 import com.karasiq.networkutils.downloader.{FileDownloaderActor, FileDownloaderTraits, HttpClientFileDownloader}
 import com.karasiq.networkutils.url.URLParser
+
+import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 // Internal
 object SosachParsers {
@@ -43,12 +44,16 @@ object SosachParsers {
   val cfWebClientFactory = ThreadLocalFactory.softRef[WebClient] {
     Try(config.getString("user-agent")) match {
       case Success(userAgent) ⇒
-        val wc = CloudFlareUtils.compatibleWebClient()
-        wc.getBrowserVersion.setUserAgent(userAgent)
-        wc
+        val bv = new BrowserVersionBuilder(BrowserVersion.FIREFOX_52)
+            .setUserAgent(userAgent)
+            .build()
+
+        HtmlUnitUtils.newWebClient(js = true, redirect = true, ignoreStatusCode = true, cache = new Cache,
+          cookieManager = new CookieManager, browserVersion = bv)
 
       case Failure(_) ⇒
-        CloudFlareUtils.compatibleWebClient()
+        HtmlUnitUtils.newWebClient(js = true, redirect = true, ignoreStatusCode = true, cache = new Cache,
+          cookieManager = new CookieManager, browserVersion = BrowserVersion.FIREFOX_52)
     }
   }
 
@@ -61,9 +66,9 @@ object SosachParsers {
       .setUserAgent(webClient.getBrowserVersion.getUserAgent)
 
     fakeIp.foreach { ip ⇒
-      import scala.collection.JavaConversions._
-
       import org.apache.http.message.BasicHeader
+
+      import scala.collection.JavaConversions._
       builder.setDefaultHeaders(Seq(new BasicHeader("X-Forwarded-For", ip)))
     }
 

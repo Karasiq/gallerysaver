@@ -2,10 +2,9 @@ package com.karasiq.gallerysaver.builtin
 
 import akka.stream.scaladsl.Source
 import com.gargoylesoftware.htmlunit.html.{HtmlImage, HtmlPage}
-
 import com.karasiq.common.StringUtils
 import com.karasiq.fileutils.PathUtils
-import com.karasiq.gallerysaver.builtin.utils.{ImageAnchor, ImagePreview}
+import com.karasiq.gallerysaver.builtin.utils.{ImageAnchor, ImagePreview, URLUtils}
 import com.karasiq.gallerysaver.scripting.internal.GallerySaverContext
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources.{CacheableGallery, FileResource, LoadableFile, LoadableResource}
@@ -59,7 +58,7 @@ class PreviewLoader(implicit ctx: GallerySaverContext) extends HtmlUnitGalleryLo
   }
 
   protected def asResource(url: String, resource: LoadableResource, subFolder: String): LoadableFile = {
-    FileResource(this.id, url, Some(resource.url), extractCookies(resource),
+    FileResource(this.id, URLUtils.fixUrl(url), Some(resource.url), extractCookies(resource),
       resource.hierarchy ++ Option(subFolder).filter(_.nonEmpty))
   }
 

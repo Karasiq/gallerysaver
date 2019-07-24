@@ -1,5 +1,5 @@
-import com.gargoylesoftware.htmlunit.html.HtmlElement
-import com.karasiq.gallerysaver.scripting.internal.Scripts
+import com.gargoylesoftware.htmlunit.html.{HtmlDivision, HtmlElement, HtmlPage}
+import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Scripts}
 import com.karasiq.networkutils.url._
 
 import scala.util.Try
@@ -8,6 +8,13 @@ import scala.util.matching.Regex
 object debug {
   val HtmlUnitUtils = com.karasiq.networkutils.HtmlUnitUtils
   import HtmlUnitUtils._
+
+  def test(): Unit  = {
+    val webClient = newWebClient()
+    webClient.getPage[HtmlPage]("https://google.com").byXPath[HtmlDivision]("//div").foreach(println)
+  }
+
+  test()
 
   lazy val webClient = newWebClient(js = false)
 
@@ -48,5 +55,10 @@ object debug {
       pXml = p.asXml()
       m <- s.r.findAllMatchIn(pXml)
     } yield m
+
+    def resources =
+      LoaderUtils.awaitAll(LoaderUtils.traverse(url))
+
+
   }
 }

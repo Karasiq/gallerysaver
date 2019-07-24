@@ -6,3 +6,4 @@ galleries
 *.bat
 loaders-private
 scripts
+*.log

@@ -1,11 +1,6 @@
 package com.karasiq.gallerysaver.scripting.internal
 
-import java.net.{URL, URLEncoder}
 import java.util.concurrent.TimeUnit
-
-import scala.concurrent._
-import scala.concurrent.duration._
-import scala.language.postfixOps
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.LoggingAdapter
@@ -13,13 +8,17 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import com.typesafe.config.Config
-
+import com.karasiq.gallerysaver.builtin.utils.URLUtils
 import com.karasiq.gallerysaver.builtin.{ImageHostingResource, PreviewsResource}
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
 import com.karasiq.gallerysaver.imageconverter.FileDownloaderImageConverter
 import com.karasiq.gallerysaver.mapdb.FileDownloaderHistory
 import com.karasiq.gallerysaver.scripting.resources.{InfiniteGallery, LoadableFile, LoadableResource}
+import com.typesafe.config.Config
+
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 /**
   * Loader scripting helper
@@ -230,6 +229,9 @@ object LoaderUtils {
     source.runWith(Sink.foreach(println))(ctx.materializer)
   }
 
+  def awaitAll[T](source: Source[T, _])(implicit ctx: GallerySaverContext): Seq[T] =
+    await(source.runWith(Sink.seq))
+
   /**
     * Loads image hosting page
     * @param url  Image hosting page URL
@@ -254,19 +256,8 @@ object LoaderUtils {
     * @param url URL
     * @return Fixed URL
     */
-  def fixUrl(url: String): String = {
-    import com.karasiq.networkutils.url._
-
-    def fixName(s: String): String = {
-      URLEncoder.encode(s, "UTF-8")
-        .replace("+", "%20")
-    }
-
-    val parsedUrl = asURL(url)
-    val fixedFile = URLParser(parsedUrl).file.path.split('/').filter(_.nonEmpty).map(fixName).mkString("/", "/", "")
-    val query = Option(parsedUrl.getQuery).fold("")("?" + _)
-    new URL(parsedUrl.getProtocol, parsedUrl.getHost, fixedFile + query).toString
-  }
+  @deprecated("Use URLUtils.fixUrl", "1.0.0-M4")
+  def fixUrl(url: String): String = URLUtils.fixUrl(url)
 
   /**
     * File downloader history provider
