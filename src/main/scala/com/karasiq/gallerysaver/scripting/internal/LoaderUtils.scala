@@ -36,6 +36,12 @@ object LoaderUtils {
     ctx.materializer
   }
 
+  trait ECImplicits {
+    implicit def executionContext(implicit ctx: GallerySaverContext): ExecutionContext = LoaderUtils.this.executionContext
+    implicit def actorSystem(implicit ctx: GallerySaverContext): ActorSystem = LoaderUtils.this.actorSystem
+    implicit def materializer(implicit ctx: GallerySaverContext): Materializer = LoaderUtils.this.materializer
+  }
+
   def log(implicit ctx: GallerySaverContext): LoggingAdapter = {
     ctx.log
   }
@@ -280,8 +286,9 @@ object LoaderUtils {
   class ContextBindings(implicit ctx: GallerySaverContext) {
     final val config = ctx.config
     final val dispatcher = ctx.gallerySaverDispatcher
-    final val actorSystem = ctx.actorSystem
     final val log = ctx.log
+    final implicit val actorSystem = ctx.actorSystem
+    final implicit val materializer = ctx.materializer
     final implicit val executionContext = ctx.executionContext
   }
 }

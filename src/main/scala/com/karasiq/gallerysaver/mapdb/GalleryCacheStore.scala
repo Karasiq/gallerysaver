@@ -33,7 +33,7 @@ class H2GalleryCacheStore(sql: AppSQLContext) extends GalleryCacheStore {
   import Model._
 
   override def +=(kv: (String, Seq[LoadableResource])): H2GalleryCacheStore.this.type = {
-    val q = quote(query[DBGalleryCache].filter(_.url == liftQ(kv._1)).update(_.resources -> liftQ(kv._2)))
+    val q = quote(query[DBGalleryCache].insert(_.url -> liftQ(kv._1), _.resources -> liftQ(kv._2)))
     context.run(q)
     this
   }

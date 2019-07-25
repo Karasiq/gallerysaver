@@ -23,6 +23,6 @@ final case class GallerySaverContext(config: Config, sqlContext: AppSQLContext, 
                                      gallerySaverDispatcher: ActorRef, scriptEngine: ScriptEngine,
                                      actorSystem: ActorSystem, registry: LoaderRegistry) {
 
-  val log = Logging(actorSystem, "GallerySaver")
+  lazy val log = Logging(actorSystem, "GallerySaver")
   implicit val materializer: Materializer = ActorMaterializer()(actorSystem)
 }

@@ -2,12 +2,15 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.headers.{Accept, Cookie, CustomHeader, `User-Agent`}
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Source
+import com.gargoylesoftware.htmlunit.BrowserVersion
 import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlMeta, HtmlPage}
 import com.karasiq.gallerysaver.builtin.utils.PagedSiteImageExtractor
-import com.karasiq.gallerysaver.scripting.internal.Loaders
+import com.karasiq.gallerysaver.scripting.internal.{AkkaHttpUtils, LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.networkutils.HtmlUnitUtils._
+
+import scala.concurrent.Future
 
 object AncensoredResources {
   def pics(url: String, hierarchy: Seq[String] = Seq("ancensored", "pics"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty): LoadableGallery = {
@@ -73,9 +76,50 @@ class AncensoredPicsLoader extends HtmlUnitGalleryLoader with PagedSiteImageExtr
   }
 }
 
-class AncensoredClipLoader extends HtmlUnitGalleryLoader {
+object AncensoredClipLoader extends LoaderUtils.ECImplicits {
   val urlRegex = "https?://ancensored\\.com/clip/(.*)".r
 
+  def getCsrfToken(htmlPage: HtmlPage): String = {
+    htmlPage.elementsByTagName[HtmlMeta]("meta")
+      .find(_.getNameAttribute == "csrf-token")
+      .fold("")(_.getContentAttribute)
+  }
+
+  def getVideoUrlJson(hash: String, csrf: String, cookies: Seq[(String, String)] = Nil, userAgent: String = BrowserVersion.BEST_SUPPORTED.getUserAgent) = {
+    import com.karasiq.gallerysaver.scripting.internal.AkkaHttpUtils._
+    val http = Http()
+
+    val headers = Seq(
+      `X-CSRF-Token`(csrf),
+      `X-Requested-With`,
+      `User-Agent`(userAgent),
+      Accept(MediaRange(MediaTypes.`application/json`))
+    ) ++ (if (cookies.nonEmpty) Seq(Cookie(cookies: _*)) else Nil)
+
+    val request = HttpRequest(HttpMethods.POST, "http://ancensored.com/video/get-link", headers.toList, FormData("hash" -> hash).toEntity)
+    execRequestToString(request)
+  }
+
+  def getVideoUrl(hash: String, csrf: String, cookies: Seq[(String, String)] = Nil, userAgent: String = BrowserVersion.BEST_SUPPORTED.getUserAgent) =
+    getVideoUrlJson(hash, csrf, cookies, userAgent)
+      .map(json => "\"src\":\"([^\"]+)\"".r.findFirstMatchIn(json).map(_.group(1)).getOrElse(throw new IllegalArgumentException(json)))
+
+  def getVideoUrlFromPage(htmlPage: HtmlPage, cookies: Seq[(String, String)] = Nil): Future[String] = {
+    val userAgent = htmlPage.getWebClient.getBrowserVersion.getUserAgent
+    val hashRegex = "data: \\{hash: '([a-f0-9]+)'},".r
+
+    hashRegex.findFirstMatchIn(htmlPage.asXml()).map(_.group(1)) match {
+      case Some(hash) =>
+        val csrf = getCsrfToken(htmlPage)
+        getVideoUrl(hash, csrf, cookies, userAgent)
+
+      case None =>
+        Future.failed(new IllegalArgumentException(s"Video hash not found: $htmlPage"))
+    }
+  }
+}
+
+class AncensoredClipLoader extends HtmlUnitGalleryLoader {
   /**
     * Loader ID
     */
@@ -88,7 +132,7 @@ class AncensoredClipLoader extends HtmlUnitGalleryLoader {
     * @return Loader can load URL
     */
   override def canLoadUrl(url: String): Boolean = {
-    url.matches(urlRegex.regex)
+    url.matches(AncensoredClipLoader.urlRegex.regex)
   }
 
   /**
@@ -108,48 +152,7 @@ class AncensoredClipLoader extends HtmlUnitGalleryLoader {
     */
   override def load(resource: LoadableResource): GalleryResources = withResource(resource) {
     case htmlPage: HtmlPage =>
-      val hashRegex = "data: \\{hash: '([a-f0-9]+)'},".r
-
-      val future = hashRegex.findFirstMatchIn(htmlPage.asXml()).map(_.group(1)).map { hash =>
-        case class `X-CSRF-Token`(csrf: String) extends CustomHeader {
-          override def name() = "X-CSRF-Token"
-          override def value() = csrf
-          override def lowercaseName() = "x-csrf-token"
-          override def renderInRequests() = true
-          override def renderInResponses() = false
-        }
-
-        case object `X-Requested-With` extends CustomHeader {
-          override def name() = "X-Requested-With"
-          override def value() = "XMLHttpRequest"
-          override def lowercaseName() = "x-requested-with"
-          override def renderInRequests() = true
-          override def renderInResponses() = false
-        }
-
-        import scala.concurrent.duration._
-        import com.karasiq.gallerysaver.scripting.internal.LoaderUtils._
-        val http = Http()
-
-        val csrf = htmlPage.elementsByTagName[HtmlMeta]("meta").find(_.getNameAttribute == "csrf-token").fold("")(_.getContentAttribute)
-
-        val cookies = extractCookies("ancensored.com").toSeq
-        val headers = Seq(
-          `X-CSRF-Token`(csrf),
-          `X-Requested-With`,
-          `User-Agent`(htmlPage.getWebClient.getBrowserVersion.getUserAgent),
-          Accept(MediaRange(MediaTypes.`application/json`))
-        ) ++ (if (cookies.nonEmpty) Seq(Cookie(cookies: _*)) else Nil)
-
-        http.singleRequest(HttpRequest(HttpMethods.POST, "http://ancensored.com/video/get-link", headers.toList, FormData("hash" -> hash).toEntity))
-          .flatMap(resp => resp.entity.toStrict(10 seconds))
-          .map(_.data.utf8String)
-          .map(json => "\"src\":\"([^\"]+)\"".r.findFirstMatchIn(json).map(_.group(1)))
-      }
-
-      Source(future.toVector)
-        .mapAsyncUnordered(1)(identity)
-        .mapConcat(_.toVector)
+      Source.fromFuture(AncensoredClipLoader.getVideoUrlFromPage(htmlPage, extractCookies("ancensored.com").toSeq))
         .map(url => FileResource(this.id, url, Some(htmlPage.getUrl.toString), extractCookiesForUrl(url), resource.hierarchy))
   }
 }
@@ -200,7 +203,7 @@ class AncensoredVideosLoader extends HtmlUnitGalleryLoader with PagedSiteImageEx
       .flatMap(_.tryClick)
 
   override protected def anchorExpander = {
-    case a: HtmlAnchor if a.getHrefAttribute.startsWith("/clip/") => Source.single(a)
+    case a: HtmlAnchor if a.getHrefAttribute.nonEmpty && a.fullHref.matches(AncensoredClipLoader.urlRegex.regex) => Source.single(a)
   }
 
   override protected def imageExpander = {

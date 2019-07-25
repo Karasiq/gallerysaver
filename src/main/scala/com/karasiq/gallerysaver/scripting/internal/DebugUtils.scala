@@ -1,6 +1,8 @@
 package com.karasiq.gallerysaver.scripting.internal
 
 import com.gargoylesoftware.htmlunit.html.HtmlElement
+import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
+import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 import com.karasiq.networkutils.url._
 
 import scala.util.Try
@@ -26,6 +28,9 @@ object DebugUtils {
     }
     "Vector(\n" + result.result() + "\n)"
   }
+
+  def loadWith(loader: GalleryLoader, url: String)(implicit ctx: GallerySaverContext): Seq[LoadableResource] =
+    LoaderUtils.awaitAll(loader.load(url).flatMapConcat(res => loader.load(res)))
 
   final case class Page(url: String) {
     lazy val htmlPage = webClient.htmlPageOption(url)
