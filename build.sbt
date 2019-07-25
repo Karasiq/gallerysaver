@@ -47,5 +47,5 @@ lazy val assemblySettings = Seq(
 )
 
 lazy val root = Project("gallerysaver", file("."))
-  .settings(rootSettings/*, assemblySettings*/)
+  .settings(rootSettings, assemblySettings)
   .enablePlugins(JavaAppPackaging)
