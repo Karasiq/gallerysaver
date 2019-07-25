@@ -251,7 +251,4 @@ class AncensoredCelebLoader extends HtmlUnitGalleryLoader {
   override def load(resource: LoadableResource) = load(resource.url)
 }
 
-Loaders.register[AncensoredPicsLoader]
-Loaders.register[AncensoredClipLoader]
-Loaders.register[AncensoredVideosLoader]
-Loaders.register[AncensoredCelebLoader]
+Loaders.register(new AncensoredPicsLoader, new AncensoredClipLoader, new AncensoredVideosLoader, new AncensoredCelebLoader)

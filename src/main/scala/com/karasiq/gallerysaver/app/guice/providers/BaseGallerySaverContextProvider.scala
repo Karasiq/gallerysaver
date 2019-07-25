@@ -1,28 +1,27 @@
 package com.karasiq.gallerysaver.app.guice.providers
 
-import javax.inject.Named
 import java.nio.file.Paths
-
-import scala.concurrent.ExecutionContext
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.google.inject.{Inject, Provider}
-import com.typesafe.config.Config
-
 import com.karasiq.gallerysaver.builtin.{ImageHostingLoader, PreviewLoader}
 import com.karasiq.gallerysaver.dispatcher.{GallerySaverDispatcher, LoaderRegistry}
+import com.karasiq.gallerysaver.mapdb.{AppSQLContext, GalleryCacheStore}
 import com.karasiq.gallerysaver.scripting.internal.GallerySaverContext
-import com.karasiq.mapdb.MapDbFile
+import com.typesafe.config.Config
+import javax.inject.Named
 
-class BaseGallerySaverContextProvider @Inject()(mapDbFile: MapDbFile, config: Config,
+import scala.concurrent.ExecutionContext
+
+class BaseGallerySaverContextProvider @Inject()(sqlContext: AppSQLContext, config: Config,
                                                 actorSystem: ActorSystem, executionContext: ExecutionContext,
-                                                @Named("fileDownloader") fileDownloader: ActorRef) extends Provider[GallerySaverContext] {
+                                                @Named("fileDownloader") fileDownloader: ActorRef, galleryCache: GalleryCacheStore) extends Provider[GallerySaverContext] {
 
   def get(): GallerySaverContext = {
     val registry = LoaderRegistry()
-    val gallerySaverDispatcher = actorSystem.actorOf(Props(classOf[GallerySaverDispatcher], Paths.get(config.getString("gallery-saver.destination")), mapDbFile, fileDownloader, registry), "gallerySaverDispatcher")
+    val gallerySaverDispatcher = actorSystem.actorOf(Props(classOf[GallerySaverDispatcher], Paths.get(config.getString("gallery-saver.destination")), galleryCache, fileDownloader, registry), "gallerySaverDispatcher")
 
-    implicit val context = GallerySaverContext(config, mapDbFile, executionContext, gallerySaverDispatcher, null, actorSystem, registry)
+    implicit val context = GallerySaverContext(config, sqlContext, executionContext, gallerySaverDispatcher, null, actorSystem, registry)
 
     context.registry
       .register(new PreviewLoader)

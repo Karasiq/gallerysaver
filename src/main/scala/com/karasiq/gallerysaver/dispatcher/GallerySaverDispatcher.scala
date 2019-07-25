@@ -11,15 +11,12 @@ import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import com.karasiq.gallerysaver.mapdb.GalleryCacheStore
 import com.karasiq.gallerysaver.scripting.loaders.GalleryLoader
 import com.karasiq.gallerysaver.scripting.resources._
-import com.karasiq.mapdb.MapDbWrapper.MapDbTreeMap
-import com.karasiq.mapdb.serialization.MapDbSerializer
-import com.karasiq.mapdb.{MapDbFile, MapDbWrapper}
 import com.karasiq.networkutils.downloader.{FileDownloader, FileToDownload}
 import org.apache.commons.io.IOUtils
 import org.apache.http.impl.cookie.BasicClientCookie
-import org.mapdb.Serializer
 
 import scala.language.postfixOps
 import scala.util.control.Exception
@@ -28,13 +25,14 @@ import scala.util.{Failure, Success, Try}
 object GallerySaverDispatcher {
   /**
     * Converts [[com.karasiq.gallerysaver.scripting.resources.LoadableFile LoadableFile]] to [[com.karasiq.networkutils.downloader.FileToDownload FileToDownload]]
+    *
     * @param directory Destination directory
     * @param f         File resource descriptor
     * @return File downloader actor structure
     * @see [[com.karasiq.networkutils.downloader.FileDownloaderActor FileDownloaderActor]]
     */
   def asFileToDownload(directory: Path, f: LoadableFile): FileToDownload = {
-    val path = Paths.get(directory.toString, f.hierarchy:_*)
+    val path = Paths.get(directory.toString, f.hierarchy: _*)
     val host = new URL(f.url).getHost
     val expire = Date.from(Instant.now().plus(30, ChronoUnit.DAYS))
     val cookies = f.cookies.map { case (k, v) ⇒
@@ -50,6 +48,7 @@ object GallerySaverDispatcher {
 
   /**
     * Updates cached resources
+    *
     * @param r   Resources to patch
     * @param res Parent resource
     */
@@ -73,12 +72,14 @@ object GallerySaverDispatcher {
 
 /**
   * Main resource loading dispatcher
+  *
   * @param rootDirectory  Destination directory
-  * @param mapDbFile      Cache file
+  * @param galleryCache   Cache store
   * @param fileDownloader File downloader actor
   * @param loaders        Loaders registry
   */
-class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDownloader: ActorRef, loaders: LoaderRegistry) extends Actor with ActorLogging {
+class GallerySaverDispatcher(rootDirectory: Path, galleryCache: GalleryCacheStore, fileDownloader: ActorRef, loaders: LoaderRegistry) extends Actor with ActorLogging {
+
   import context.dispatcher
 
   final implicit val materializer = ActorMaterializer(ActorMaterializerSettings(context.system))
@@ -98,7 +99,7 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
 
     case fg: FileGenerator ⇒
       log.debug("Generating file: {}", fg)
-      val path = Paths.get(rootDirectory.toString, fg.hierarchy:_*)
+      val path = Paths.get(rootDirectory.toString, fg.hierarchy: _*)
         .resolve(FileDownloader.fileNameFor(fg.url, fg.fileName.getOrElse("")))
 
       Files.createDirectories(path.getParent)
@@ -142,17 +143,7 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
   private def loadCached(loader: GalleryLoader, cg: CacheableGallery): Unit = {
     val sender = this.sender()
 
-    import MapDbSerializer.Default._
-    implicit def resourceSerializer: Serializer[LoadableResource] = javaObjectSerializer
-
-    val cache: MapDbTreeMap[String, Seq[LoadableResource]] = MapDbWrapper(mapDbFile).createTreeMap(cg.loader)(_
-      .keySerializer(MapDbSerializer[String])
-      .valueSerializer(MapDbSerializer[Seq[LoadableResource]])
-      .nodeSize(32)
-      .valuesOutsideNodesEnable()
-    )
-
-    Try(cache.get(cg.url)) match {
+    Try(galleryCache.get(cg.url)) match {
       case Success(Some(resources)) ⇒
         log.debug("Found in cache: {}", cg)
         sender ! LoadedResources(Source(GallerySaverDispatcher.patchResources(resources, cg).toVector))
@@ -165,7 +156,7 @@ class GallerySaverDispatcher(rootDirectory: Path, mapDbFile: MapDbFile, fileDown
             if (resources.isEmpty) {
               log.warning(s"No resources found for: $cg")
             } else {
-              cache += cg.url → resources
+              galleryCache += cg.url → resources
             }
             sender ! result
 

@@ -347,4 +347,4 @@ class SosachLoader extends HtmlUnitGalleryLoader {
   }
 }
 
-Loaders.register[SosachLoader]
+Loaders.register(new SosachLoader)

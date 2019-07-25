@@ -154,6 +154,4 @@ object ImgSrcParser {
 
 }
 
-Loaders
-  .register[ImgSrcGalleryLoader]
-  .register[ImgSrcUserLoader]
+Loaders.register(new ImgSrcGalleryLoader, new ImgSrcUserLoader)

@@ -160,6 +160,4 @@ object DeviantArtParser {
 
 }
 
-Loaders
-  .register[DeviantArtGalleryLoader]
-  .register[DeviantArtPhotoLoader]
+Loaders.register(new DeviantArtGalleryLoader, new DeviantArtPhotoLoader)

@@ -333,7 +333,4 @@ class ImageFapUserLoader extends HtmlUnitGalleryLoader {
   }
 }
 
-Loaders
-  .register[ImageFapGalleryLoader]
-  .register[ImageFapFolderLoader]
-  .register[ImageFapUserLoader]
+Loaders.register(new ImageFapGalleryLoader, new ImageFapFolderLoader, new ImageFapUserLoader)

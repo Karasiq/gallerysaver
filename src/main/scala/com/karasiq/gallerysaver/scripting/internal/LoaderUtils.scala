@@ -12,7 +12,7 @@ import com.karasiq.gallerysaver.builtin.utils.URLUtils
 import com.karasiq.gallerysaver.builtin.{ImageHostingResource, PreviewsResource}
 import com.karasiq.gallerysaver.dispatcher.LoadedResources
 import com.karasiq.gallerysaver.imageconverter.FileDownloaderImageConverter
-import com.karasiq.gallerysaver.mapdb.FileDownloaderHistory
+import com.karasiq.gallerysaver.mapdb.{FileDownloaderHistory, H2FDHistoryStore}
 import com.karasiq.gallerysaver.scripting.resources.{InfiniteGallery, LoadableFile, LoadableResource}
 import com.typesafe.config.Config
 
@@ -263,7 +263,7 @@ object LoaderUtils {
     * File downloader history provider
     */
   def fdHistory(implicit ctx: GallerySaverContext): FileDownloaderHistory = {
-    new FileDownloaderHistory(ctx.mapDbFile)
+    new FileDownloaderHistory(new H2FDHistoryStore(ctx.sqlContext))
   }
 
   /**

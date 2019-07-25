@@ -9,8 +9,6 @@ import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.networkutils.HtmlUnitUtils._
 import com.karasiq.networkutils.url.{URLParser, _}
-import eu.timepit.refined.numeric.Positive
-import shapeless.tag.@@
 
 import scala.util.Try
 import scala.util.matching.Regex
@@ -250,11 +248,8 @@ object FlickrParser extends LoaderUtils.ContextBindings {
       * @param page Photo preview page
       * @return ID, title, and photo URL, or None if invalid URL provided
       */
-    def unapply(page: HtmlPage): Option[(Long @@ Positive, String, String)] = {
-      import eu.timepit.refined.refineT
-
-      val id: Option[Long @@ Positive] = Try(URLParser(page.getUrl).file.name.toLong).toOption
-        .flatMap(id ⇒ refineT[Positive](id).fold(_ ⇒ None, Some.apply))
+    def unapply(page: HtmlPage): Option[(Long, String, String)] = {
+      val id: Option[Long] = Try(URLParser(page.getUrl).file.name.toLong).toOption
 
       val title: String = page.firstByXPath[HtmlMeta]("//meta[@name='title']")
         .fold("Untitled")(meta ⇒ PathUtils.validFileName(meta.getContentAttribute.split('|')(0).take(50)))
@@ -373,8 +368,4 @@ object FlickrResources {
   }
 }
 
-Loaders
-  .register[FlickrGalleryLoader]
-  .register[FlickrSearchLoader]
-  .register[FlickrPhotoLoader]
-  .register[FlickRiverLoader]
+Loaders.register(new FlickrGalleryLoader, new FlickrSearchLoader, new FlickrPhotoLoader, new FlickRiverLoader)

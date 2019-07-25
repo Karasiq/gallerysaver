@@ -69,4 +69,4 @@ object BlogspotBlog {
   }
 }
 
-Loaders.register[BlogspotLoader]
+Loaders.register(new BlogspotLoader)

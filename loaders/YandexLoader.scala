@@ -104,6 +104,4 @@ object YandexParser {
 
 }
 
-Loaders
-  .register[YandexGalleryLoader]
-  .register[YandexPhotoLoader]
+Loaders.register(new YandexGalleryLoader, new YandexPhotoLoader)

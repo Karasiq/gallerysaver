@@ -298,6 +298,4 @@ object TumblrParser {
   }
 }
 
-Loaders
-  .register[TumblrArchiveLoader]
-  .register[TumblrPostLoader]
+Loaders.register(new TumblrArchiveLoader, new TumblrPostLoader)

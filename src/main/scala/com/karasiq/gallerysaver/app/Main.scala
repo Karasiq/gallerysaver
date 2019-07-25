@@ -1,6 +1,6 @@
 package com.karasiq.gallerysaver.app
 
-import java.io.{File, FileWriter, PrintWriter, Writer}
+import java.io.{Closeable, File, FileWriter, PrintWriter, Writer}
 import java.nio.file.{Path, Paths}
 import java.util
 import java.util.logging.Level
@@ -11,8 +11,8 @@ import com.google.inject.name.Names
 import com.karasiq.fileutils.PathUtils._
 import com.karasiq.fileutils.pathtree.PathTreeUtils._
 import com.karasiq.gallerysaver.app.guice.{GallerySaverMainModule, GallerySaverModule}
+import com.karasiq.gallerysaver.mapdb.AppSQLContext
 import com.karasiq.gallerysaver.scripting.internal.{GallerySaverContext, LoaderUtils}
-import com.karasiq.mapdb.MapDbFile
 import com.karasiq.networkutils.HtmlUnitUtils
 import javax.script.{ScriptEngine, SimpleScriptContext}
 import net.codingwell.scalaguice.InjectorExtensions._
@@ -62,14 +62,17 @@ object Main extends App {
       actorSystem.log.info("Shutting down GallerySaver")
       Await.result(actorSystem.terminate(), Duration.Inf)
 
-      val mapDbFile = injector.instance[MapDbFile]
-      IOUtils.closeQuietly(mapDbFile)
+      val storage = injector.instance[AppSQLContext]
+      storage match {
+        case c: Closeable => c.close()
+        case _ => // Ignore
+      }
     }
 
     // Load scripts
     implicit val context = injector.instance[GallerySaverContext]
     val engine = injector.instance[ScriptEngine](Names.named("scala"))
-    Thread.currentThread().setContextClassLoader(cl) // Fix scala compiler buggy loader
+    // Thread.currentThread().setContextClassLoader(cl) // Fix scala compiler buggy loader
 
     context.config.getStringList("gallery-saver.auto-exec-folders").foreach { folder ⇒
       Paths.get(folder) match {
