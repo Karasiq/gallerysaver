@@ -1062,10 +1062,12 @@ public class Nano {
                         buffer.lastLine();
                         break;
                     case PREV_PAGE:
-                        buffer.prevPage();
+                        historyPrev();
+                        // buffer.prevPage();
                         break;
                     case NEXT_PAGE:
-                        buffer.nextPage();
+                        historyNext();
+                        // buffer.nextPage();
                         break;
                     case SCROLL_UP:
                         buffer.scrollUp(1);
@@ -1820,13 +1822,42 @@ public class Nano {
         this.nbBindings = 25;
     }
 
+    private List<List<String>> history = new ArrayList<>();
+    private int historyIndex = -1;
+
+    private void historyPrev() {
+        if (history.isEmpty()) return;
+        historyIndex -= 1;
+        if (historyIndex < 0) historyIndex = history.size() - 1;
+        updateFromHistory();
+    }
+
+    private void historyNext() {
+        if (history.isEmpty()) return;
+        historyIndex += 1;
+        if (historyIndex >= history.size()) historyIndex = 0;
+        updateFromHistory();
+    }
+
+    private synchronized void updateFromHistory() {
+        assert historyIndex >= 0 && historyIndex < history.size();
+        final List<String> lines = history.get(historyIndex);
+        buffer.lines.clear();
+        buffer.lines.addAll(lines);
+        buffer.computeAllOffsets();
+    }
+
     protected boolean doExecute(List<String> lines) {
         return false;
     }
 
-    protected void execute() throws IOException {
-        if (doExecute(buffer.lines))
+    protected void execute() {
+        if (doExecute(buffer.lines)) {
+            historyIndex = -1;
+            history.add(Collections.unmodifiableList(new ArrayList<>(buffer.lines)));
+            if (history.size() > 1000) history.remove(0);
             buffer.clear();
+        }
     }
 
     private boolean quit() throws IOException {

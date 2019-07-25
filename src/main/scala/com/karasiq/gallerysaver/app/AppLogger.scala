@@ -6,7 +6,7 @@ import akka.actor.Actor
 import akka.event.Logging.{Debug, Debug3, Error, Error3, Info, Info3, InitializeLogger, LogEvent, LoggerInitialized, Warning, Warning3, simpleName, stackTraceFor}
 
 object AppLogger {
-  var println = scala.Predef.println(_: Any)
+  var println = (f: String, _: Any) => scala.Predef.println(f)
 }
 
 class AppLogger extends Actor {
@@ -67,7 +67,7 @@ class AppLogger extends Actor {
         event.thread.getName,
         event.logSource,
         event.message,
-        stackTraceFor(event.cause)))
+        stackTraceFor(event.cause)), event.message)
     case _ ⇒
       val f = if (event.cause == Error.NoCause) ErrorFormatWithoutCause else ErrorFormat
       println(f.format(
@@ -75,7 +75,7 @@ class AppLogger extends Actor {
         event.thread.getName,
         event.logSource,
         event.message,
-        stackTraceFor(event.cause)))
+        stackTraceFor(event.cause)), event.message)
   }
 
   def warning(event: Warning): Unit = event match {
@@ -85,13 +85,13 @@ class AppLogger extends Actor {
         timestamp(event),
         event.thread.getName,
         event.logSource,
-        event.message))
+        event.message), event.message)
     case _ ⇒
       println(WarningFormat.format(
         timestamp(event),
         event.thread.getName,
         event.logSource,
-        event.message))
+        event.message), event.message)
   }
 
   def info(event: Info): Unit = event match {
@@ -101,13 +101,13 @@ class AppLogger extends Actor {
         timestamp(event),
         event.thread.getName,
         event.logSource,
-        event.message))
+        event.message), event.message)
     case _ ⇒
       println(InfoFormat.format(
         timestamp(event),
         event.thread.getName,
         event.logSource,
-        event.message))
+        event.message), event.message)
   }
 
   def debug(event: Debug): Unit = event match {
@@ -117,17 +117,17 @@ class AppLogger extends Actor {
         timestamp(event),
         event.thread.getName,
         event.logSource,
-        event.message))
+        event.message), event.message)
     case _ ⇒
       println(DebugFormat.format(
         timestamp(event),
         event.thread.getName,
         event.logSource,
-        event.message))
+        event.message), event.message)
   }
 
-  def println(s: String) = {
-    AppLogger.println(s)
+  def println(s: String, msg: Any) = {
+    AppLogger.println(s, msg)
     pw.println(s)
     pw.flush()
   }
