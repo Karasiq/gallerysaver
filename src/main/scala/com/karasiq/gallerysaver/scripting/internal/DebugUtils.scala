@@ -29,7 +29,10 @@ object DebugUtils {
     "Vector(\n" + result.result() + "\n)"
   }
 
-  def loadWith(loader: GalleryLoader, url: String)(implicit ctx: GallerySaverContext): Seq[LoadableResource] =
+  def parse(url: String)(implicit ctx: GallerySaverContext): Seq[LoadableResource] =
+    LoaderUtils.awaitAll(LoaderUtils.traverse(url))
+
+  def parseWith(loader: GalleryLoader, url: String)(implicit ctx: GallerySaverContext): Seq[LoadableResource] =
     LoaderUtils.awaitAll(loader.load(url).flatMapConcat(res => loader.load(res)))
 
   final case class Page(url: String) {
@@ -56,6 +59,6 @@ object DebugUtils {
     } yield m
 
     def resources(implicit ctx: GallerySaverContext) =
-      LoaderUtils.awaitAll(LoaderUtils.traverse(url))
+      DebugUtils.load(url)
   }
 }

@@ -1,6 +1,7 @@
 package com.karasiq.gallerysaver.mapdb
 
 import java.time.Instant
+import java.util.Date
 
 import com.typesafe.config.{Config, ConfigFactory}
 import io.getquill.{H2JdbcContext, SnakeCase}
@@ -24,8 +25,8 @@ class AppSQLContext(config: Config) extends AutoCloseable {
 
   trait PredefEncoders {
     import context._
-    implicit val encodeInstant = MappedEncoding[Instant, Long](_.toEpochMilli)
-    implicit val decodeInstant = MappedEncoding[Long, Instant](Instant.ofEpochMilli)
+    implicit val encodeInstant = MappedEncoding[Instant, Date](Date.from)
+    implicit val decodeInstant = MappedEncoding[Date, Instant](_.toInstant)
   }
 
   override def close(): Unit = {

@@ -4,6 +4,8 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, 
 
 import com.karasiq.gallerysaver.scripting.resources.LoadableResource
 
+import scala.util.control.NonFatal
+
 trait GalleryCacheStore extends collection.mutable.AbstractMap[String, Seq[LoadableResource]]
 
 class H2GalleryCacheStore(sql: AppSQLContext) extends GalleryCacheStore {
@@ -33,8 +35,11 @@ class H2GalleryCacheStore(sql: AppSQLContext) extends GalleryCacheStore {
   import Model._
 
   override def +=(kv: (String, Seq[LoadableResource])): H2GalleryCacheStore.this.type = {
-    val q = quote(query[DBGalleryCache].insert(_.url -> liftQ(kv._1), _.resources -> liftQ(kv._2)))
-    context.run(q)
+    val upd = quote(query[DBGalleryCache].filter(_.url == liftQ(kv._1)).update(_.resources -> liftQ(kv._2)))
+    if (context.run(upd) == 0) {
+      val ins = quote(query[DBGalleryCache].insert(_.url -> liftQ(kv._1), _.resources -> liftQ(kv._2)))
+      context.run(ins)
+    }
     this
   }
 

@@ -38,11 +38,19 @@ final class H2FDHistoryStore(sql: AppSQLContext) extends FDHistoryStore {
   }
 
   override def +=(kv: (String, FDHistoryEntry)): H2FDHistoryStore.this.type = {
-    val q = quote {
+    val upd = quote {
       val path = liftQ(kv._1)
-      query[DBHistoryEntry].insert(_.path -> liftQ(kv._1), _.fileName -> liftQ(kv._2.fileName), _.url -> liftQ(kv._2.url), _.size -> liftQ(kv._2.size), _.date -> liftQ(kv._2.date))
+      query[DBHistoryEntry].filter(_.path == liftQ(kv._1)).update(_.fileName -> liftQ(kv._2.fileName), _.url -> liftQ(kv._2.url), _.size -> liftQ(kv._2.size), _.date -> liftQ(kv._2.date))
     }
-    context.run(q)
+
+    if (context.run(upd) == 0) {
+      val ins = quote {
+        val path = liftQ(kv._1)
+        query[DBHistoryEntry].insert(_.path -> liftQ(kv._1), _.fileName -> liftQ(kv._2.fileName), _.url -> liftQ(kv._2.url), _.size -> liftQ(kv._2.size), _.date -> liftQ(kv._2.date))
+      }
+      context.run(ins)
+    }
+
     this
   }
 
