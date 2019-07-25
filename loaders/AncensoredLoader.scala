@@ -1,11 +1,11 @@
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.headers.{Accept, Cookie, CustomHeader, `User-Agent`}
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.{Accept, Cookie, `User-Agent`}
 import akka.stream.scaladsl.Source
 import com.gargoylesoftware.htmlunit.BrowserVersion
-import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlMeta, HtmlPage}
+import com.gargoylesoftware.htmlunit.html.{HtmlAnchor, HtmlMeta, HtmlPage, HtmlSource, HtmlVideo}
 import com.karasiq.gallerysaver.builtin.utils.PagedSiteImageExtractor
-import com.karasiq.gallerysaver.scripting.internal.{AkkaHttpUtils, LoaderUtils, Loaders}
+import com.karasiq.gallerysaver.scripting.internal.{LoaderUtils, Loaders}
 import com.karasiq.gallerysaver.scripting.loaders.HtmlUnitGalleryLoader
 import com.karasiq.gallerysaver.scripting.resources._
 import com.karasiq.networkutils.HtmlUnitUtils._
@@ -23,6 +23,10 @@ object AncensoredResources {
 
   def clip(url: String, hierarchy: Seq[String] = Seq("ancensored", "video", "unsorted"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty): LoadableGallery = {
     CachedGalleryResource("ancensored-clip", url, referrer, cookies, hierarchy)
+  }
+
+  def sextape(url: String, hierarchy: Seq[String] = Seq("ancensored", "sextape"), referrer: Option[String] = None, cookies: Map[String, String] = Map.empty): LoadableGallery = {
+    CachedGalleryResource("ancensored-sextape", url, referrer, cookies, hierarchy)
   }
 }
 
@@ -238,7 +242,8 @@ class AncensoredCelebLoader extends HtmlUnitGalleryLoader {
       val name = x.group(1)
       val res = Seq(
         AncensoredResources.videos(s"http://ancensored.com/celebrities/video/$name"),
-        AncensoredResources.pics(s"http://ancensored.com/celebrities/pics/$name")
+        AncensoredResources.pics(s"http://ancensored.com/celebrities/pics/$name"),
+        AncensoredResources.sextape(s"http://ancensored.com/celebrities/$name/sextape")
       )
       Source(res.toVector)
     case None =>
@@ -254,4 +259,57 @@ class AncensoredCelebLoader extends HtmlUnitGalleryLoader {
   override def load(resource: LoadableResource) = load(resource.url)
 }
 
-Loaders.register(new AncensoredPicsLoader, new AncensoredClipLoader, new AncensoredVideosLoader, new AncensoredCelebLoader)
+class AncensoredSextapeLoader extends HtmlUnitGalleryLoader {
+  val urlRegex = "https?://ancensored\\.com/\\w+/([^/]*)/sextape(/\\d+/?)?".r
+
+  /**
+    * Loader ID
+    */
+  override def id: String = "ancensored-sextape"
+
+  /**
+    * Is loader applicable to provided URL
+    *
+    * @param url URL
+    * @return Loader can load URL
+    */
+  override def canLoadUrl(url: String): Boolean = {
+    url.matches(urlRegex.regex)
+  }
+
+  /**
+    * Fetches resources from URL
+    *
+    * @param url URL
+    * @return Available resource
+    */
+  override def load(url: String): GalleryResources ={
+    val links = Source.fromFuture(LoaderUtils.future(webClient.withGetHtmlPage(url) { htmlPage =>
+      val links = htmlPage.anchors.collect {
+        case a: HtmlAnchor if a.getHrefAttribute.nonEmpty && a.fullHref.matches(urlRegex.regex) => a.fullHref
+      }
+      links.toVector
+    })).mapConcat(identity)
+
+    links.map(AncensoredResources.sextape(_))
+  }
+
+  /**
+    * Fetches sub resources from URL
+    *
+    * @param resource Parent resource
+    * @return Available resources
+    */
+  override def load(resource: LoadableResource): GalleryResources = withResource(resource) {
+    case htmlPage: HtmlPage =>
+      val subDir = urlRegex.findFirstMatchIn(htmlPage.getUrl.toString).fold("unsorted")(_.group(1))
+      val video = htmlPage.elementsByTagName[HtmlVideo]("video").flatMap(_.subElementsBy {
+        case s: HtmlSource => s.fullUrl(_.getAttribute("src"))
+      })
+
+      Source(video.toVector)
+        .map(url => FileResource(this.id, url, Some(htmlPage.getUrl.toString), extractCookiesForUrl(url), resource.hierarchy :+ subDir))
+  }
+}
+
+Loaders.register(new AncensoredPicsLoader, new AncensoredClipLoader, new AncensoredVideosLoader, new AncensoredCelebLoader, new AncensoredSextapeLoader)
