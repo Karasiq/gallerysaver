@@ -1099,6 +1099,12 @@ public class Nano {
                     case TOGGLE_SUSPENSION:
                         toggleSuspension();
                         break;
+                    case CUT:
+                        cut();
+                        break;
+                    case UNCUT:
+                        uncut();
+                        break;
                     default:
                         setMessage("Unsupported " + op.name().toLowerCase().replace('_', '-'));
                         break;
@@ -1847,17 +1853,26 @@ public class Nano {
         buffer.computeAllOffsets();
     }
 
+    private void cut() {
+        if (buffer.lines.size() == 1 && buffer.lines.get(0).isEmpty()) return;
+        historyIndex = -1;
+        history.add(Collections.unmodifiableList(new ArrayList<>(buffer.lines)));
+        if (history.size() > 1000) history.remove(0);
+        buffer.clear();
+    }
+
+    private void uncut() {
+        if (history.isEmpty()) return;
+        historyIndex = history.size();
+        historyPrev();
+    }
+
     protected boolean doExecute(List<String> lines) {
         return false;
     }
 
     protected void execute() {
-        if (doExecute(buffer.lines)) {
-            historyIndex = -1;
-            history.add(Collections.unmodifiableList(new ArrayList<>(buffer.lines)));
-            if (history.size() > 1000) history.remove(0);
-            buffer.clear();
-        }
+        if (doExecute(buffer.lines)) cut();
     }
 
     private boolean quit() throws IOException {

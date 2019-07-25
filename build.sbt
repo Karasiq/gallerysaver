@@ -22,9 +22,7 @@ lazy val rootSettings = Seq(
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "net.sourceforge.htmlunit" % "htmlunit" % "2.35.0",
       "org.jsoup" % "jsoup" % "1.10.2",
-      "org.jline" % "jline" % "3.12.1",
-      "org.slf4j" % "slf4j-api" % "1.7.5",
-      "org.slf4j" % "slf4j-log4j12" % "1.7.5"
+      "org.jline" % "jline" % "3.12.1"
     )
   },
   mainClass in Compile := Some("com.karasiq.gallerysaver.app.Main"),

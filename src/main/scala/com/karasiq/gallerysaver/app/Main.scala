@@ -159,11 +159,11 @@ object Main extends App {
       }
     }
     try {
-      AppLogger.println = (_, v) => nano.setMessageInstant(v.toString)
+      AppLogger.printF = (_, v) => nano.setMessageInstant(v.toString)
       nano.run()
     } catch {
       case NonFatal(_) =>
-        AppLogger.println = (s, _) => scala.Predef.println(s)
+        AppLogger.printF = (s, _) => scala.Predef.println(s)
         Iterator.continually(StdIn.readLine()).takeWhile(_.ne(null)).foreach { line ⇒
           if (line.startsWith("https://") || line.startsWith("http://")) {
             Try(LoaderUtils.loadAllUrls(line)).failed.foreach(System.err.println(_))

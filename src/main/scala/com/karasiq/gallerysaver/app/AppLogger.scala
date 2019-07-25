@@ -6,16 +6,17 @@ import akka.actor.Actor
 import akka.event.Logging.{Debug, Debug3, Error, Error3, Info, Info3, InitializeLogger, LogEvent, LoggerInitialized, Warning, Warning3, simpleName, stackTraceFor}
 
 object AppLogger {
-  var println = (f: String, _: Any) => scala.Predef.println(f)
+  @volatile
+  private[app] var printF = (f: String, _: Any) => scala.Predef.println(f)
+
+  def log(a: Any): Unit = printF(a.toString, a)
 }
 
 class AppLogger extends Actor {
-  val fw = new FileWriter("gs-download.log", true)
-  val pw = new PrintWriter(fw)
-
+  private[this] val fileWriter = new PrintWriter(new FileWriter("gs-download.log", true))
 
   override def postStop(): Unit = {
-    pw.close()
+    fileWriter.close()
     super.postStop()
   }
 
@@ -45,10 +46,10 @@ class AppLogger extends Actor {
   private final val DebugFormat           = "[DEBUG] [%s] [%s] [%s] %s"
   private final val DebugWithMarkerFormat = "[DEBUG] [%s][%s] [%s] [%s] %s"
 
-  def timestamp(event: LogEvent): String = synchronized {
+  def timestamp(event: LogEvent): String = {
     date.setTime(event.timestamp)
     dateFormat.format(date)
-  } // SDF isn't threadsafe
+  }
 
   def print(event: Any): Unit = event match {
     case e: Error   ⇒ error(e)
@@ -61,7 +62,7 @@ class AppLogger extends Actor {
   def error(event: Error): Unit = event match {
     case e: Error3 ⇒ // has marker
       val f = if (event.cause == Error.NoCause) ErrorWithoutCauseWithMarkerFormat else ErrorFormatWithMarker
-      println(f.format(
+      printEvent(f.format(
         e.marker.name,
         timestamp(event),
         event.thread.getName,
@@ -70,7 +71,7 @@ class AppLogger extends Actor {
         stackTraceFor(event.cause)), event.message)
     case _ ⇒
       val f = if (event.cause == Error.NoCause) ErrorFormatWithoutCause else ErrorFormat
-      println(f.format(
+      printEvent(f.format(
         timestamp(event),
         event.thread.getName,
         event.logSource,
@@ -80,14 +81,14 @@ class AppLogger extends Actor {
 
   def warning(event: Warning): Unit = event match {
     case e: Warning3 ⇒ // has marker
-      println(WarningWithMarkerFormat.format(
+      printEvent(WarningWithMarkerFormat.format(
         e.marker.name,
         timestamp(event),
         event.thread.getName,
         event.logSource,
         event.message), event.message)
     case _ ⇒
-      println(WarningFormat.format(
+      printEvent(WarningFormat.format(
         timestamp(event),
         event.thread.getName,
         event.logSource,
@@ -96,14 +97,14 @@ class AppLogger extends Actor {
 
   def info(event: Info): Unit = event match {
     case e: Info3 ⇒ // has marker
-      println(InfoWithMarkerFormat.format(
+      printEvent(InfoWithMarkerFormat.format(
         e.marker.name,
         timestamp(event),
         event.thread.getName,
         event.logSource,
         event.message), event.message)
     case _ ⇒
-      println(InfoFormat.format(
+      printEvent(InfoFormat.format(
         timestamp(event),
         event.thread.getName,
         event.logSource,
@@ -112,23 +113,23 @@ class AppLogger extends Actor {
 
   def debug(event: Debug): Unit = event match {
     case e: Debug3 ⇒ // has marker
-      println(DebugWithMarkerFormat.format(
+      printEvent(DebugWithMarkerFormat.format(
         e.marker.name,
         timestamp(event),
         event.thread.getName,
         event.logSource,
         event.message), event.message)
     case _ ⇒
-      println(DebugFormat.format(
+      printEvent(DebugFormat.format(
         timestamp(event),
         event.thread.getName,
         event.logSource,
         event.message), event.message)
   }
 
-  def println(s: String, msg: Any) = {
-    AppLogger.println(s, msg)
-    pw.println(s)
-    pw.flush()
+  private[this] def printEvent(s: String, msg: Any): Unit = {
+    AppLogger.printF(s, msg)
+    fileWriter.println(s)
+    fileWriter.flush()
   }
 }
