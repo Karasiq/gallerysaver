@@ -59,6 +59,6 @@ object DebugUtils {
     } yield m
 
     def resources(implicit ctx: GallerySaverContext) =
-      DebugUtils.load(url)
+      DebugUtils.parse(url)
   }
 }
