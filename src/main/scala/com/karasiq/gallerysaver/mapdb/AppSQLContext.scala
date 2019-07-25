@@ -5,7 +5,7 @@ import java.time.Instant
 import com.typesafe.config.{Config, ConfigFactory}
 import io.getquill.{H2JdbcContext, SnakeCase}
 
-class AppSQLContext(config: Config) {
+class AppSQLContext(config: Config) extends AutoCloseable {
   val dbConfig: Config = createH2Config()
   val context = new H2JdbcContext[SnakeCase](dbConfig)
 
@@ -22,7 +22,13 @@ class AppSQLContext(config: Config) {
     ).asJava)
   }
 
-  import context._
-  implicit val encodeInstant = MappedEncoding[Instant, Long](_.toEpochMilli)
-  implicit val decodeInstant = MappedEncoding[Long, Instant](Instant.ofEpochMilli)
+  trait PredefEncoders {
+    import context._
+    implicit val encodeInstant = MappedEncoding[Instant, Long](_.toEpochMilli)
+    implicit val decodeInstant = MappedEncoding[Long, Instant](Instant.ofEpochMilli)
+  }
+
+  override def close(): Unit = {
+    context.close()
+  }
 }

@@ -6,12 +6,12 @@ import scala.collection.mutable
 
 trait FDHistoryStore extends mutable.AbstractMap[String, FDHistoryEntry]
 
-final class H2FDHistoryStore(sql: AppSQLContext) extends FDHistoryStore with AutoCloseable {
+final class H2FDHistoryStore(sql: AppSQLContext) extends FDHistoryStore {
 
   import sql._
   import context.{lift => liftQ, _}
 
-  private[this] object Model {
+  private[this] object Model extends PredefEncoders {
     final case class DBHistoryEntry(path: String, fileName: String, url: String, size: Long, date: Instant) {
       def toEntry = FDHistoryEntry(fileName, url, size, date)
     }
@@ -49,9 +49,5 @@ final class H2FDHistoryStore(sql: AppSQLContext) extends FDHistoryStore with Aut
     val q = quote(query[DBHistoryEntry].filter(_.path == liftQ(key)).delete)
     context.run(q)
     this
-  }
-
-  override def close(): Unit = {
-    context.close()
   }
 }
